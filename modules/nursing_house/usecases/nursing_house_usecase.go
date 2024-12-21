@@ -24,3 +24,11 @@ func NewNhUseCase(nhrepo repositories.NhRepository) *NhUsecaseImpl {
 func (u *NhUsecaseImpl) CreateNh(nursingHouse *entities.NursingHouse) error {
 	return u.nhrepo.Create(nursingHouse)
 }
+
+func (u *NhUsecaseImpl) GetAllNh() ([]entities.NursingHouse, error) {
+	return u.nhrepo.GetAllNh()
+}
+
+func (u *NhUseCaseImpl) GetNhByID(id string) (entities.NursingHouse, error) {
+	return u.nhrepo.GetNhByID(id)
+}

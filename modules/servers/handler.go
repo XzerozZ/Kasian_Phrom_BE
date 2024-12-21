@@ -15,12 +15,15 @@ func SetupRoutes(app *fiber.App) {
 	if db == nil {
 		log.Fatal("Failed to initialize database")
 	}
-	
+
 	NhRepository := repositories.NewGormNhRepository(db)
 	NhUsecase := usecases.NewNhUseCase(NhRepository)
 	NhController := controllers.NewNhController(NhUsecase)
 
 	app.Post("/nursinghouses", NhController.CreateNhHandler)
+	app.Get("/nursinghouses", NhController.GetAllNhHandler)
+	app.Get("/nursinghouses/:id", NhController.GetNhByIDHandler)
+
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
 			"status":  "success",

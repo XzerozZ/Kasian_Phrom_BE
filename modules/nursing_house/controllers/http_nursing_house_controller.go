@@ -36,9 +36,46 @@ func (c *NhController) CreateNhHandler(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"status":      "OK",
+		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "Nursing house created successfully",
 		"result":      nursingHouse,
 	})
-  }
+}
+
+func (c *NhController) GetAllNhHandler(ctx *fiber.Ctx) error {
+	nhList, err := c.NhUsecase.GetAllNh()
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Nursing houses retrieved successfully",
+		"result":      nhList,
+	})
+}
+
+func (c *NhController) GetNhByIDHandler(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	nh, err := c.NhUsecase.GetNhByID(id)
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "success",
+		"status_code": fiber.StatusOK,
+		"message":     "Nursing house retrieved successfully",
+		"result":      nh,
+	})
+}
