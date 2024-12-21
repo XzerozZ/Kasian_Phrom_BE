@@ -2,18 +2,25 @@ package usecases
 
 import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 )
 
-type NhUse struct {
-	NhRepo entities.NhRepository
+type NhUsecase interface {
+	CreateNh(nursingHouse *entities.NursingHouse) error
 }
 
-func NewNhUseCase(nhRepo entities.NhRepository) entities.NhUsecase {
-	return &NhUse{
-		NhRepo: nhRepo
-	}
+type NhUsecaseImpl struct {
+	nhrepo repositories.NhRepository
 }
 
-func (s *NhUse) CreateNh(req *Nursing_House) (*Nursing_House, error) {
-	return s.NhRepo.CreateNh(nursing_house)
+type NHUsecase interface {
+	CreateNursingHouse(nursingHouse *entities.NursingHouse) error
+}
+
+func NewNhUseCase(nhrepo repositories.NhRepository) *NhUsecaseImpl {
+	return &NhUsecaseImpl{nhrepo: nhrepo}
+}
+
+func (u *NhUsecaseImpl) CreateNh(nursingHouse *entities.NursingHouse) error {
+	return u.nhrepo.Create(nursingHouse)
 }

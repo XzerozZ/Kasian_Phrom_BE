@@ -1,30 +1,41 @@
-package utils
+package database
 
 import (
-	"errors"
 	"fmt"
-
+	"log"
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	"gorm.io/gorm"
+	"gorm.io/driver/postgres"
 )
 
-func ConnectionUrlBuilder(stuff string, cfg *configs.Configs) (string, error) {
-	var url string
+var db *gorm.DB
 
-	switch stuff {
-	case "fiber":
-		url = fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)
-	case "postgresql":
-		url = fmt.Sprintf(
-			"host=%s port=%s user=%s password=%s dbname=%s",
-			cfg.PostgreSQL.Host,
-			cfg.PostgreSQL.Port,
-			cfg.PostgreSQL.Username,
-			cfg.PostgreSQL.Password,
-			cfg.PostgreSQL.Database,
-		)
-	default:
-		errMsg := fmt.Sprintf("error, connection url builder doesn't know the %s", stuff)
-		return "", errors.New(errMsg)
+func InitDB(config configs.PostgreSQL) {
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		config.Host,
+		config.Username,
+		config.Password,
+		config.Database,
+		config.Port,
+	)
+
+	var err error
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	return url, nil
+	err = db.AutoMigrate(
+        &entities.NursingHouse{},
+    )
+	log.Println("Database connection established successfully!")
+}
+
+func GetDB() *gorm.DB {
+	if db == nil {
+		log.Fatal("Database is not initialized")
+	}
+	
+	return db
 }

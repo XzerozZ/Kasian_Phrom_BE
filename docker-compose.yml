@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:latest
@@ -12,6 +10,8 @@ services:
       POSTGRES_DB: SE
     volumes:
       - ./data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -24,3 +24,9 @@ services:
     restart: always
     depends_on:
       - postgres
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
