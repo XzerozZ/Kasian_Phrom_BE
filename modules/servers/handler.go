@@ -26,7 +26,7 @@ func SetupRoutes(app *fiber.App) {
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
-			"status":  "success",
+			"status":  "Success",
 			"message": "Welcome to the Nursing House System!",
 		})
 	})
