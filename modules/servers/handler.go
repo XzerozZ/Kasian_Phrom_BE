@@ -22,7 +22,10 @@ func SetupRoutes(app *fiber.App) {
 
 	app.Post("/nursinghouses", NhController.CreateNhHandler)
 	app.Get("/nursinghouses", NhController.GetAllNhHandler)
+	app.Get("/nursinghouses/active", NhController.GetAllActiveNhHandler)
 	app.Get("/nursinghouses/:id", NhController.GetNhByIDHandler)
+	app.Put("/nursinghouses/:id", NhController.UpdateNhByIDHandler)
+	app.Delete("/nursinghouses/:id", NhController.DeleteNhByIDHandler)
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
