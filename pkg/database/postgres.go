@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
-	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/entities"
 	"gorm.io/gorm"
 	"gorm.io/driver/postgres"
 )
