@@ -18,8 +18,7 @@ func main() {
 	app.Use(cors.New(cors.Config{
         AllowOrigins: "*",
         AllowMethods: "GET,POST,PUT,DELETE",
-        AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-		AllowCredentials: true,
+        AllowHeaders: "Origin, Content-Type, Accept",
     }))
 	serverAddress := config.App.Host + ":" + config.App.Port
 	log.Printf("Server is running on %s", serverAddress)
