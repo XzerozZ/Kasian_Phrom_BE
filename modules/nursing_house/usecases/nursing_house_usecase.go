@@ -1,7 +1,7 @@
 package usecases
 
 import (
-	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 )
 

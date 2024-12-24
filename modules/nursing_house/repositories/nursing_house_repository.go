@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"gorm.io/gorm"
-  	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+  	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/entities"
 )
 
 type GormNhRepository struct {

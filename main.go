@@ -15,11 +15,7 @@ func main() {
 	database.InitDB(config.PostgreSQL)
 	app := fiber.New()
 	servers.SetupRoutes(app)
-	app.Use(cors.New(cors.Config{
-        AllowOrigins: "*",
-        AllowMethods: "GET,POST,PUT,DELETE",
-        AllowHeaders: "Content-Type",
-    }))
+	app.Use(cors.New())
 	serverAddress := config.App.Host + ":" + config.App.Port
 	log.Printf("Server is running on %s", serverAddress)
 	log.Fatal(app.Listen(serverAddress))
