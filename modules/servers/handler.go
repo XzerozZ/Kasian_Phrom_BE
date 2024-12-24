@@ -8,6 +8,7 @@ import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/usecases"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func SetupRoutes(app *fiber.App) {
@@ -19,7 +20,11 @@ func SetupRoutes(app *fiber.App) {
 	NhRepository := repositories.NewGormNhRepository(db)
 	NhUsecase := usecases.NewNhUseCase(NhRepository)
 	NhController := controllers.NewNhController(NhUsecase)
-
+	app.Use(cors.New(cors.Config{
+        AllowOrigins: "http://localhost:3000",
+        AllowMethods: "GET, POST, PUT, DELETE",
+        AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+    }))
 	app.Post("/nursinghouses", NhController.CreateNhHandler)
 	app.Get("/nursinghouses", NhController.GetAllNhHandler)
 	app.Get("/nursinghouses/active", NhController.GetAllActiveNhHandler)

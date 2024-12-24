@@ -7,7 +7,6 @@ import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/database"
 	
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func main() {
@@ -15,11 +14,6 @@ func main() {
 	database.InitDB(config.PostgreSQL)
 	app := fiber.New()
 	servers.SetupRoutes(app)
-	app.Use(cors.New(cors.Config{
-        AllowOrigins: "*",
-        AllowMethods: "GET,POST,PUT,DELETE",
-        AllowHeaders: "Origin, Content-Type, Accept",
-    }))
 	serverAddress := config.App.Host + ":" + config.App.Port
 	log.Printf("Server is running on %s", serverAddress)
 	log.Fatal(app.Listen(serverAddress))
