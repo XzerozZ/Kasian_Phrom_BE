@@ -13,7 +13,7 @@ func main() {
 	config := configs.LoadConfigs()
 	database.InitDB(config.PostgreSQL)
 	app := fiber.New()
-	servers.SetupRoutes(app)
+	servers.SetupRoutes(app, config.JWT)
 	serverAddress := config.App.Host + ":" + config.App.Port
 	log.Printf("Server is running on %s", serverAddress)
 	log.Fatal(app.Listen(serverAddress))

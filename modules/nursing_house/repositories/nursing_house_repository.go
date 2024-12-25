@@ -2,11 +2,15 @@ package repositories
 
 import (
 	"gorm.io/gorm"
-  	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/entities"
+  	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 )
 
 type GormNhRepository struct {
   	db *gorm.DB
+}
+
+func NewGormNhRepository(db *gorm.DB) *GormNhRepository {
+	return &GormNhRepository{db: db}
 }
 
 type NhRepository interface {
@@ -16,10 +20,6 @@ type NhRepository interface {
 	GetNhByID(id int) (entities.NursingHouse, error)
 	UpdateNhByID(nursingHouse entities.NursingHouse) (entities.NursingHouse, error)
 	DeleteNhByID(id int) error
-}
-
-func NewGormNhRepository(db *gorm.DB) *GormNhRepository {
- 	return &GormNhRepository{db: db}
 }
 
 func (r *GormNhRepository) CreateNh(nursingHouse entities.NursingHouse) (entities.NursingHouse, error) {

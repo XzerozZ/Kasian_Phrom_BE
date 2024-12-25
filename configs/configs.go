@@ -9,12 +9,13 @@ import (
 
 type Configs struct {
 	PostgreSQL PostgreSQL
+	JWT		   JWT
 	App        Fiber
 }
 
 type Fiber struct {
-	Host string
-	Port string
+	Host 	string
+	Port 	string
 }
 
 type PostgreSQL struct {
@@ -23,6 +24,10 @@ type PostgreSQL struct {
 	Username string
 	Password string
 	Database string
+}
+
+type JWT struct {
+	Secret	 string
 }
 
 func LoadConfigs() *Configs {
@@ -42,6 +47,9 @@ func LoadConfigs() *Configs {
 		App: Fiber{
 			Host: os.Getenv("APP_HOST"),
 			Port: os.Getenv("APP_PORT"),
+		},
+		JWT: JWT{
+			Secret:	os.Getenv("JWT_SECRET"),
 		},
 	}
 }

@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"strconv"
-  	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/entities"
+  	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/usecases"
 
 	"github.com/gofiber/fiber/v2"
@@ -35,7 +35,6 @@ func (c *NhController) CreateNhHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
-
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status":		"Success",
 		"status_code": 	fiber.StatusOK,

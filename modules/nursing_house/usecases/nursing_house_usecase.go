@@ -1,7 +1,7 @@
 package usecases
 
 import (
-	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/entities"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 )
 
@@ -43,6 +43,7 @@ func (u *NhUseCaseImpl) UpdateNhByID(id int,nursingHouse entities.NursingHouse) 
 	if err != nil {
 		return entities.NursingHouse{}, err
 	}
+	
 	existingNh.Name = nursingHouse.Name
 	existingNh.Province = nursingHouse.Province
 	existingNh.Address = nursingHouse.Address
@@ -52,6 +53,7 @@ func (u *NhUseCaseImpl) UpdateNhByID(id int,nursingHouse entities.NursingHouse) 
 	existingNh.Web_site = nursingHouse.Web_site
 	existingNh.Time = nursingHouse.Time
 	existingNh.Status = nursingHouse.Status
+
 	updatedNh, err := u.nhrepo.UpdateNhByID(existingNh)
 	if err != nil {
 		return entities.NursingHouse{}, err
