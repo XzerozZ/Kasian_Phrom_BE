@@ -67,5 +67,6 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 	if err != nil {
 		return "", nil, err
 	}
+	
 	return tokenString, &user, nil
 }

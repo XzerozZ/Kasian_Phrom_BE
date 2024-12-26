@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"strings"
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -15,6 +16,16 @@ func JWTMiddleware(config configs.JWT) fiber.Handler {
 				"status":      "Unauthorized",
 				"status_code": fiber.StatusUnauthorized,
 				"message":     "Missing or invalid token",
+				"result":      nil,
+			})
+		}
+
+		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+		if tokenString == "" {
+			return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"status":      "Unauthorized",
+				"status_code": fiber.StatusUnauthorized,
+				"message":     "Missing or invalid token format",
 				"result":      nil,
 			})
 		}

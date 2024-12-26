@@ -58,6 +58,8 @@ func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB) {
 	nhGroup.Post("/", nhController.CreateNhHandler)
 	nhGroup.Get("/", nhController.GetAllNhHandler)
 	nhGroup.Get("/active", nhController.GetAllActiveNhHandler)
+	nhGroup.Get("/inactive", nhController.GetAllInactiveNhHandler)
+	nhGroup.Get("/id" , nhController.GetNhNextIDHandler)
 	nhGroup.Get("/:id", nhController.GetNhByIDHandler)
 	nhGroup.Put("/:id", nhController.UpdateNhByIDHandler)
 	nhGroup.Delete("/:id", nhController.DeleteNhByIDHandler)

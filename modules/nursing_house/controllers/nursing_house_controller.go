@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"strconv"
   	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/usecases"
 
@@ -79,8 +78,8 @@ func (c *NhController) GetAllActiveNhHandler(ctx *fiber.Ctx) error {
 	})
 }
 
-func (c *NhController) GetNhByIDHandler(ctx *fiber.Ctx) error {
-	id, err := strconv.Atoi(ctx.Params("id"))
+func (c *NhController) GetAllInactiveNhHandler(ctx *fiber.Ctx) error {
+	data, err := c.nhusecase.GetInactiveNh()
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,
@@ -89,6 +88,16 @@ func (c *NhController) GetNhByIDHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      	"Success",
+		"status_code": 	fiber.StatusOK,
+		"message":     	"Nursing house retrieved successfully",
+		"result":      	data,
+	})
+}
+
+func (c *NhController) GetNhByIDHandler(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
 	data, err := c.nhusecase.GetNhByID(id)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
@@ -106,8 +115,8 @@ func (c *NhController) GetNhByIDHandler(ctx *fiber.Ctx) error {
 	})
 }
 
-func (c *NhController) UpdateNhByIDHandler(ctx *fiber.Ctx) error {
-	id, err := strconv.Atoi(ctx.Params("id"))
+func (c *NhController) GetNhNextIDHandler(ctx *fiber.Ctx) error {
+	data, err := c.nhusecase.GetNhNextID()
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,
@@ -116,6 +125,17 @@ func (c *NhController) UpdateNhByIDHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      	"Success",
+		"status_code": 	fiber.StatusOK,
+		"message":     	"Nursing house retrieved successfully",
+		"result":      	data,
+	})
+}
+
+func (c *NhController) UpdateNhByIDHandler(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
 	var nursingHouse entities.NursingHouse
 	if err := ctx.BodyParser(&nursingHouse); err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
@@ -125,7 +145,7 @@ func (c *NhController) UpdateNhByIDHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
-	updatedNh, err := c.nhusecase.UpdateNhByID(int(id), nursingHouse)
+	updatedNh, err := c.nhusecase.UpdateNhByID(id, nursingHouse)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,
@@ -143,16 +163,8 @@ func (c *NhController) UpdateNhByIDHandler(ctx *fiber.Ctx) error {
 }
 
 func (c *NhController) DeleteNhByIDHandler(ctx *fiber.Ctx) error {
-	id, err := strconv.Atoi(ctx.Params("id"))
-	if err != nil {
-		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
-		})
-	}
-	err = c.nhusecase.DeleteNhByID(id)
+	id := ctx.Params("id")
+	err := c.nhusecase.DeleteNhByID(id)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,

@@ -9,9 +9,11 @@ type NhUseCase interface {
 	CreateNh(nursingHouse entities.NursingHouse) (entities.NursingHouse, error)
 	GetAllNh() ([]entities.NursingHouse, error)
 	GetActiveNh() ([]entities.NursingHouse, error)
-	GetNhByID(id int) (entities.NursingHouse, error)
-	UpdateNhByID(id int,nursingHouse entities.NursingHouse) (entities.NursingHouse, error)
-	DeleteNhByID(id int) error
+	GetInactiveNh() ([]entities.NursingHouse, error)
+	GetNhByID(id string) (entities.NursingHouse, error)
+	GetNhNextID() (string, error)
+	UpdateNhByID(id string,nursingHouse entities.NursingHouse) (entities.NursingHouse, error)
+	DeleteNhByID(id string) error
 }
 
 type NhUseCaseImpl struct {
@@ -23,6 +25,12 @@ func NewNhUseCase(nhrepo repositories.NhRepository) *NhUseCaseImpl {
 }
 
 func (u *NhUseCaseImpl) CreateNh(nursingHouse entities.NursingHouse) (entities.NursingHouse, error) {
+	id, err := u.nhrepo.GetNhNextID()
+	if err != nil {
+		return entities.NursingHouse{}, err
+	}
+
+	nursingHouse.ID = id
 	return u.nhrepo.CreateNh(nursingHouse)
 }
 
@@ -34,11 +42,19 @@ func (u *NhUseCaseImpl) GetActiveNh() ([]entities.NursingHouse, error) {
 	return u.nhrepo.GetActiveNh()
 }
 
-func (u *NhUseCaseImpl) GetNhByID(id int) (entities.NursingHouse, error) {
+func (u *NhUseCaseImpl) GetInactiveNh() ([]entities.NursingHouse, error) {
+	return u.nhrepo.GetInactiveNh()
+}
+
+func (u *NhUseCaseImpl) GetNhByID(id string) (entities.NursingHouse, error) {
 	return u.nhrepo.GetNhByID(id)
 }
 
-func (u *NhUseCaseImpl) UpdateNhByID(id int,nursingHouse entities.NursingHouse) (entities.NursingHouse, error) {
+func (u *NhUseCaseImpl) GetNhNextID() (string, error) {
+	return u.nhrepo.GetNhNextID()
+}
+
+func (u *NhUseCaseImpl) UpdateNhByID(id string, nursingHouse entities.NursingHouse) (entities.NursingHouse, error) {
 	existingNh, err := u.nhrepo.GetNhByID(id)
 	if err != nil {
 		return entities.NursingHouse{}, err
@@ -61,6 +77,6 @@ func (u *NhUseCaseImpl) UpdateNhByID(id int,nursingHouse entities.NursingHouse) 
 	return updatedNh, nil
 }  		
 
-func (u *NhUseCaseImpl) DeleteNhByID(id int) error {
+func (u *NhUseCaseImpl) DeleteNhByID(id string) error {
 	return u.nhrepo.DeleteNhByID(id)
 }
