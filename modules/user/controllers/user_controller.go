@@ -88,6 +88,7 @@ func (c *UserController) LoginHandler(ctx *fiber.Ctx) error {
 		"result":     	fiber.Map{
 			"token":       token,
 			"u_id":        user.ID,
+			"uname":	   user.Username,
 			"role":        user.Role.RoleName,
 		},
 	})

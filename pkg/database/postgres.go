@@ -14,12 +14,13 @@ var db *gorm.DB
 
 func InitDB(config configs.PostgreSQL) {
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		config.Host,
 		config.Username,
 		config.Password,
 		config.Database,
 		config.Port,
+		config.SSLMode,
 	)
 
 	var err error
@@ -31,7 +32,10 @@ func InitDB(config configs.PostgreSQL) {
         &entities.NursingHouse{},
 		&entities.Role{},
 		&entities.User{},
-
+		&entities.Image{},
+		&entities.NHImage{},
+		&entities.News{},
+		&entities.Dialog{},
     )
 	insertRoles()
 	log.Println("Database connection established successfully!")

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"mime/multipart"
   	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/usecases"
 
@@ -25,7 +26,23 @@ func (c *NhController) CreateNhHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
-	data, err := c.nhusecase.CreateNh(nursingHouse)
+
+	form, err := ctx.MultipartForm()
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "Error",
+			"message":     "Failed to parse form data",
+			"status_code": fiber.StatusBadRequest,
+		})
+	}
+
+	files := form.File["images"]
+	var fileHeaders []multipart.FileHeader
+    for _, file := range files {
+        fileHeaders = append(fileHeaders, *file)
+    }
+
+	data, err := c.nhusecase.CreateNh(nursingHouse, fileHeaders, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrInternalServerError.Message,
@@ -34,6 +51,7 @@ func (c *NhController) CreateNhHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
+
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status":		"Success",
 		"status_code": 	fiber.StatusOK,
@@ -159,23 +177,5 @@ func (c *NhController) UpdateNhByIDHandler(ctx *fiber.Ctx) error {
 		"status_code": 	fiber.StatusOK,
 		"message":     	"Nursing house retrieved successfully",
 		"result":      	updatedNh,
-	})
-}
-
-func (c *NhController) DeleteNhByIDHandler(ctx *fiber.Ctx) error {
-	id := ctx.Params("id")
-	err := c.nhusecase.DeleteNhByID(id)
-	if err != nil {
-		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
-		})
-	}
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"Nursing house Deleted successfully",
 	})
 }
