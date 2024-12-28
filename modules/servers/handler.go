@@ -33,7 +33,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase) {
     }))
 
 	setupNursingHouseRoutes(app, db, supa)
-	SetupNewsRoutes(app, db)
+	SetupNewsRoutes(app, db, supa)
 	setupUserRoutes(app, db, jwt, supa)
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
@@ -43,12 +43,15 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase) {
 	})
 }
 
-func SetupNewsRoutes(app *fiber.App, db *gorm.DB) {
+func SetupNewsRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
 	newsRepository := newsRepositories.NewGormNewsRepository(db)
-	newsUseCase := newsUseCases.NewNewsUseCase(newsRepository)
+	newsUseCase := newsUseCases.NewNewsUseCase(newsRepository, supa)
 	newsController := newsControllers.NewNewsController(newsUseCase)
 
-	app.Post("/news", newsController.CreateNewsHandler)
+	newsGroup := app.Group("/news")
+	newsGroup.Post("/", newsController.CreateNewsHandler)
+	newsGroup.Get("/id" , newsController.GetNewsNextIDHandler)
+	newsGroup.Get("/:id", newsController.GetNewsByIDHandler)
 }
 
 func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.Supabase) {

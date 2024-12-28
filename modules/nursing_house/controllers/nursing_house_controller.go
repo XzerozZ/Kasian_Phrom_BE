@@ -125,6 +125,7 @@ func (c *NhController) GetNhByIDHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
+	
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,

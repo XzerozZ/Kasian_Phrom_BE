@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"mime/multipart"
   	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
 
@@ -16,17 +17,64 @@ func NewNewsController(newsusecase usecases.NewsUseCase) *NewsController {
 }
 
 func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
-	req := new(entities.CreateNewsRequest)
-	if err := ctx.BodyParser(req); err != nil {
+	req := &entities.News{
+		Title: ctx.FormValue("title"),
+	}
+
+	form, err := ctx.MultipartForm()
+	if err != nil {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrBadRequest.Message,
-			"status_code": 	fiber.ErrBadRequest.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "invalid form data",
+			"result":      nil,
 		})
 	}
 
-	if err := c.newsusecase.CreateNews(req); err != nil {
+	types := form.Value["type"]
+	descs := form.Value["desc"]
+	if len(types) != len(descs) {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "type and desc counts do not match",
+			"result":      nil,
+		})
+	}
+
+	files := form.File["images"]
+	var fileHeaders []multipart.FileHeader
+    for _, file := range files {
+        fileHeaders = append(fileHeaders, *file)
+    }
+
+	for i := 0; i < len(types); i++ {
+		req.Dialog = append(req.Dialog, entities.Dialog{
+			Type: types[i],
+			Desc: descs[i],
+		})
+	}
+
+	if req.Title == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "title cannot be empty",
+			"result":      nil,
+		})
+	}
+
+	if len(req.Dialog) == 0 {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "dialogs cannot be empty",
+			"result":      nil,
+		})
+	}
+
+	data, err := c.newsusecase.CreateNews(req, fileHeaders, ctx)
+	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrInternalServerError.Message,
 			"status_code": 	fiber.ErrInternalServerError.Code,
@@ -39,6 +87,45 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
 		"status":		"Success",
 		"status_code": 	fiber.StatusOK,
 		"message":     	"Nursing house created successfully",
-		"result":      	req,
+		"result":      	data,
+	})
+}
+
+func(c *NewsController) GetNewsByIDHandler(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	data, err := c.newsusecase.GetNewsByID(id)
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrNotFound.Message,
+			"status_code": 	fiber.ErrNotFound.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      	"Success",
+		"status_code": 	fiber.StatusOK,
+		"message":     	"Nursing house retrieved successfully",
+		"result":      	data,
+	})
+}
+
+func (c *NewsController) GetNewsNextIDHandler(ctx *fiber.Ctx) error {
+	data, err := c.newsusecase.GetNewsNextID()
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrNotFound.Message,
+			"status_code": 	fiber.ErrNotFound.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      	"Success",
+		"status_code": 	fiber.StatusOK,
+		"message":     	"Nursing house retrieved successfully",
+		"result":      	data,
 	})
 }

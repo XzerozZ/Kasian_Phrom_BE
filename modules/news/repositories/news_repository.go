@@ -17,31 +17,40 @@ func NewGormNewsRepository(db *gorm.DB) *GormNewsRepository {
 }
 
 type NewsRepository interface {
-	CreateNews(news *entities.News) error
+	CreateNews(news *entities.News, images []entities.Image) (*entities.News, error)
 	GetNewsByID(id string) (*entities.News, error)
 	GetNewsNextID() (string, error)
 }
 
-func (r *GormNewsRepository) CreateNews(news *entities.News) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+func (r *GormNewsRepository) CreateNews(news *entities.News, images []entities.Image) (*entities.News, error) {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(news).Error; err != nil {
 			return err
 		}
 
-		for i := range news.Dialog {
-			dialog := &news.Dialog[i]
-			if err := tx.Create(dialog).Error; err != nil {
+		for _, image := range images {
+			if err := tx.Create(&image).Error; err != nil {
 				return err
 			}
 		}
 
+		if err := tx.Model(news).Association("Images").Append(images); err != nil {
+			return err
+		}
+
 		return nil
 	})
+	
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetNewsByID(news.ID)
 }
 
 func (r *GormNewsRepository) GetNewsByID(id string) (*entities.News, error) {
 	var news entities.News
-	if err := r.db.Preload("Dialog").First(&news, "id = ?", id).Error; err != nil {
+	if err := r.db.Preload("Dialog").Preload("Images").First(&news, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &news , nil
