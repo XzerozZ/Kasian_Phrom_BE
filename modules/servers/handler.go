@@ -74,4 +74,5 @@ func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase)
 	nhGroup.Get("/id" , nhController.GetNhNextIDHandler)
 	nhGroup.Get("/:id", nhController.GetNhByIDHandler)
 	nhGroup.Put("/:id", nhController.UpdateNhByIDHandler)
+	nhGroup.Get("/:id/images", nhController.GetNhImages)
 }

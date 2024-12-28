@@ -29,12 +29,12 @@ func UploadImage(fileName string, dir string, config configs.Supabase) (string, 
         ContentType: func() *string { s := "image/jpeg"; return &s }(),
     }
 
-    fileName = dir + "/" + fileName
+    fileName = dir + fileName
     _, err = storageClient.UploadFile(config.Bucket, fileName, file, options)
     if err != nil {
         return "", fmt.Errorf("failed to upload file '%s' to bucket '%s': %w", fileName, config.Bucket, err)
     }
 
-    url := fmt.Sprintf("%s/storage/v1/object/public/%s/%s", config.URL, config.Bucket, fileName)
+    url := fmt.Sprintf("%s/object/public/%s/%s", config.URL, config.Bucket, fileName)
     return url, nil
 }

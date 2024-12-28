@@ -25,38 +25,34 @@ type NhRepository interface {
 	GetNhNextID() (string, error)
 	UpdateNhByID(nursingHouse *entities.NursingHouse) (*entities.NursingHouse, error)
 	AddImages(id string, images []entities.Image) (*entities.NursingHouse, error)
-    RemoveImages(id string, imageIDs []string) error
+    RemoveImages(id string) error
+    GetImagesByNhID(id string) ([]entities.Image, error)
 }
 
 func (r *GormNhRepository) CreateNh(nursingHouse *entities.NursingHouse, images []entities.Image) (*entities.NursingHouse, error) {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
         if err := tx.Create(nursingHouse).Error; err != nil {
-            return err
-        }
-        
-        if len(images) > 0 {
-            for i := range images {
-                if err := tx.Create(&images[i]).Error; err != nil {
-                    return err
-                }
+			return err
+		}
 
-                if err := tx.Create(&entities.NHImage{
-                    NHID:    nursingHouse.ID,
-                    ImageID: images[i].ID,
-                }).Error; err != nil {
-                    return err
-                }
-            }
-            return tx.Model(nursingHouse).Association("Images").Append(images)
-        }
-        return nil
-    })
+		for _, image := range images {
+			if err := tx.Create(&image).Error; err != nil {
+				return err
+			}
+		}
 
-    if err != nil {
-        return nil, err
-    }
+		if err := tx.Model(nursingHouse).Association("Images").Append(images); err != nil {
+			return err
+		}
 
-    return r.GetNhByID(nursingHouse.ID)
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetNhByID(nursingHouse.ID)
 }
 
 func (r *GormNhRepository) GetAllNh() ([]entities.NursingHouse, error) {
@@ -64,6 +60,7 @@ func (r *GormNhRepository) GetAllNh() ([]entities.NursingHouse, error) {
 	if err := r.db.Preload("Images").Find(&nursingHouses).Error; err != nil {
 		return nil, err
 	}
+
 	return nursingHouses , nil
 }
 
@@ -72,6 +69,7 @@ func (r *GormNhRepository) GetActiveNh() ([]entities.NursingHouse, error) {
 	if err := r.db.Preload("Images").Where("status = ?", "Active").Find(&nursingHouses).Error; err != nil {
 		return nil, err
 	}
+
 	return nursingHouses, nil
 }
 
@@ -80,6 +78,7 @@ func (r *GormNhRepository) GetInactiveNh() ([]entities.NursingHouse, error) {
 	if err := r.db.Preload("Images").Where("status = ?", "Inactive").Find(&nursingHouses).Error; err != nil {
 		return nil, err
 	}
+
 	return nursingHouses, nil
 }
 
@@ -88,6 +87,7 @@ func (r *GormNhRepository) GetNhByID(id string) (*entities.NursingHouse, error) 
 	if err := r.db.Preload("Images").First(&nursingHouse, id).Error; err != nil {
 		return nil, err
 	}
+
 	return &nursingHouse , nil
 }
 
@@ -101,6 +101,7 @@ func (r *GormNhRepository) GetNhNextID() (string, error) {
 	if maxID != "" {
 		maxIDInt, _ = strconv.Atoi(maxID)
 	}
+
 	nextID := maxIDInt + 1
 	formattedID := fmt.Sprintf("%05d", nextID)
 	return formattedID, nil
@@ -110,6 +111,7 @@ func (r *GormNhRepository) UpdateNhByID(nursingHouse *entities.NursingHouse) (*e
 	if err := r.db.Save(&nursingHouse).Error; err != nil {
 		return nil, err
 	}
+
 	return r.GetNhByID(nursingHouse.ID)
 }
 
@@ -124,13 +126,6 @@ func (r *GormNhRepository) AddImages(id string, images []entities.Image) (*entit
             if err := tx.Create(&images[i]).Error; err != nil {
                 return err
             }
-
-            if err := tx.Create(&entities.NHImage{
-                NHID:    id,
-                ImageID: images[i].ID,
-            }).Error; err != nil {
-                return err
-            }
         }
         
         return tx.Model(&nursingHouse).Association("Images").Append(images)
@@ -143,17 +138,42 @@ func (r *GormNhRepository) AddImages(id string, images []entities.Image) (*entit
     return r.GetNhByID(id)
 }
 
-func (r *GormNhRepository) RemoveImages(id string, imageIDs []string) error {
+func (r *GormNhRepository) RemoveImages(id string) error {
     return r.db.Transaction(func(tx *gorm.DB) error {
-        var nursingHouse entities.NursingHouse
-        if err := tx.First(&nursingHouse, id).Error; err != nil {
+        var nh entities.NursingHouse
+		if err := tx.Where("id = ?", id).First(&nh).Error; err != nil {
             return err
         }
-        
-        if err := tx.Where("nh_id = ? AND image_id IN ?", id, imageIDs).Delete(&entities.NHImage{}).Error; err != nil {
+
+        var images []entities.Image
+        if err := tx.Model(&nh).Association("Images").Find(&images); err != nil {
             return err
         }
-        
-        return tx.Where("id IN ?", imageIDs).Delete(&entities.Image{}).Error
+
+        if err := tx.Model(&nh).Association("Images").Clear(); err != nil {
+            return err
+        }
+
+        if len(images) > 0 {
+            var imageIDs []string
+            for _, img := range images {
+                imageIDs = append(imageIDs, img.ID)
+            }
+
+            if err := tx.Unscoped().Where("id IN ?", imageIDs).Delete(&entities.Image{}).Error; err != nil {
+                return err
+            }
+        }
+
+        return nil
     })
+}
+
+func (r *GormNhRepository) GetImagesByNhID(id string) ([]entities.Image, error) {
+	var nursingHouse entities.NursingHouse
+	err := r.db.Preload("Images").Where("id = ?", id).First(&nursingHouse).Error
+	if err != nil {
+		return nil, err
+	}
+	return nursingHouse.Images, nil
 }

@@ -33,7 +33,6 @@ func InitDB(config configs.PostgreSQL) {
 		&entities.Role{},
 		&entities.User{},
 		&entities.Image{},
-		&entities.NHImage{},
 		&entities.News{},
 		&entities.Dialog{},
     )
