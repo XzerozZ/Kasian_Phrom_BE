@@ -118,9 +118,12 @@ func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, files []
 		}
 	}
 
-	if len(deleteImages) > 0 {
-		existingNews.Images = filterOutImages(existingNews.Images, deleteImages)
-	}
+	for _, imageID := range imagesToDelete {
+        err := u.newsrepo.RemoveImages(id, &imageID)
+        if err != nil {
+            return nil, err
+        }
+    }
 
     var newImages []entities.Image
 	for _, file := range files {
