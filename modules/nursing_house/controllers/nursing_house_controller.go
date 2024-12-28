@@ -197,24 +197,3 @@ func (c *NhController) UpdateNhByIDHandler(ctx *fiber.Ctx) error {
 		"result":      	updatedNh,
 	})
 }
-
-func (c *NhController) GetNhImages(ctx *fiber.Ctx) error {
-	id := ctx.Params("id")
-
-	images, err := c.nhusecase.GetImagesByNhID(id)
-	if err != nil {
-		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
-		})
-	}
-
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"Nursing house retrieved successfully",
-		"result":      	images,
-	})
-}

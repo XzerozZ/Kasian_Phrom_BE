@@ -34,7 +34,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase) {
 
 	setupNursingHouseRoutes(app, db, supa)
 	SetupNewsRoutes(app, db)
-	setupUserRoutes(app, db, jwt)
+	setupUserRoutes(app, db, jwt, supa)
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
 			"status":  "Success",
@@ -51,14 +51,18 @@ func SetupNewsRoutes(app *fiber.App, db *gorm.DB) {
 	app.Post("/news", newsController.CreateNewsHandler)
 }
 
-func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT) {
+func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.Supabase) {
 	userRepository := userRepositories.NewGormUserRepository(db)
-	userUseCase := userUseCases.NewUserUseCase(userRepository, jwt)
+	userUseCase := userUseCases.NewUserUseCase(userRepository, jwt, supa)
 	userController := userControllers.NewUserController(userUseCase)
 
-	app.Post("/register", userController.RegisterHandler)
-	app.Post("/login", userController.LoginHandler)
-	app.Post("/logout", middlewares.JWTMiddleware(jwt), userController.LogoutHandler)
+	authGroup := app.Group("/auth")
+	authGroup.Post("/register", userController.RegisterHandler)
+	authGroup.Post("/login", userController.LoginHandler)
+	authGroup.Post("/logout", middlewares.JWTMiddleware(jwt), userController.LogoutHandler)
+
+	userGroup := app.Group("/user")
+	userGroup.Put("/:id", userController.UpdateUserByIDHandler)
 }
 
 func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
@@ -74,5 +78,4 @@ func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase)
 	nhGroup.Get("/id" , nhController.GetNhNextIDHandler)
 	nhGroup.Get("/:id", nhController.GetNhByIDHandler)
 	nhGroup.Put("/:id", nhController.UpdateNhByIDHandler)
-	nhGroup.Get("/:id/images", nhController.GetNhImages)
 }

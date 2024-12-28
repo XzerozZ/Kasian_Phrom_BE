@@ -26,7 +26,6 @@ type NhRepository interface {
 	UpdateNhByID(nursingHouse *entities.NursingHouse) (*entities.NursingHouse, error)
 	AddImages(id string, images []entities.Image) (*entities.NursingHouse, error)
     RemoveImages(id string) error
-    GetImagesByNhID(id string) ([]entities.Image, error)
 }
 
 func (r *GormNhRepository) CreateNh(nursingHouse *entities.NursingHouse, images []entities.Image) (*entities.NursingHouse, error) {
@@ -167,13 +166,4 @@ func (r *GormNhRepository) RemoveImages(id string) error {
 
         return nil
     })
-}
-
-func (r *GormNhRepository) GetImagesByNhID(id string) ([]entities.Image, error) {
-	var nursingHouse entities.NursingHouse
-	err := r.db.Preload("Images").Where("id = ?", id).First(&nursingHouse).Error
-	if err != nil {
-		return nil, err
-	}
-	return nursingHouse.Images, nil
 }

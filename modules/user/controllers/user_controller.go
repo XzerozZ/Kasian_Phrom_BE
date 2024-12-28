@@ -102,3 +102,55 @@ func (c *UserController) LogoutHandler(ctx *fiber.Ctx) error {
 		"result":      nil,
 	})
 }
+
+func (c *UserController) UpdateUserByIDHandler(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	var user entities.User
+	if err := ctx.BodyParser(&user); err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrNotFound.Message,
+			"status_code": 	fiber.ErrNotFound.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+
+	form, err := ctx.MultipartForm()
+    if err != nil {
+        return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":      "Error",
+            "status_code": fiber.StatusBadRequest,
+            "message":     "Failed to parse form data",
+            "result":      nil,
+        })
+    }
+
+	
+    files := form.File["images"]
+    if len(files) == 0 {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "No file provided",
+			"result":      nil,
+		})
+	}
+
+	file := files[0]
+	updatedUser, err := c.userusecase.UpdateUserByID(id, user, *file, ctx)
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrNotFound.Message,
+			"status_code": 	fiber.ErrNotFound.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      	"Success",
+		"status_code": 	fiber.StatusOK,
+		"message":     	"Nursing house retrieved successfully",
+		"result":      	updatedUser,
+	})
+}

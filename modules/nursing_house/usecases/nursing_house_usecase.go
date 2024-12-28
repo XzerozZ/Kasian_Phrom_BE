@@ -20,7 +20,6 @@ type NhUseCase interface {
 	GetNhByID(id string) (*entities.NursingHouse, error)
 	GetNhNextID() (string, error)
 	UpdateNhByID(id string, nursingHouse entities.NursingHouse, files []multipart.FileHeader, ctx *fiber.Ctx) (*entities.NursingHouse, error)
-	GetImagesByNhID(id string) ([]entities.Image, error)
 }
 
 type NhUseCaseImpl struct {
@@ -160,7 +159,7 @@ func (u *NhUseCaseImpl) UpdateNhByID(id string, nursingHouse entities.NursingHou
 			ImageLink: imageUrl,
 		})
 	}
-	
+
 	existingNh.Images = newImages
 	if len(newImages) > 0 {
 		_, err = u.nhrepo.AddImages(id, newImages)
@@ -176,13 +175,4 @@ func (u *NhUseCaseImpl) UpdateNhByID(id string, nursingHouse entities.NursingHou
     }
 
 	return updatedNh, nil
-}  		
-
-func (u *NhUseCaseImpl) GetImagesByNhID(id string) ([]entities.Image, error) {
-	images, err := u.nhrepo.GetImagesByNhID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	return images, nil
 }
