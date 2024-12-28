@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"strings"
 	"mime/multipart"
   	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
@@ -170,7 +171,6 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 	
-
 	form, err := ctx.MultipartForm()
 	if err != nil {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
@@ -192,16 +192,12 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	files := form.File["images"]
-	if len(files) == 0 {
-        return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "status":      "Error",
-            "status_code": fiber.StatusBadRequest,
-            "message":     "At least one image is required",
-            "result":      nil,
-        })
-    }
+	var deleteImages []string
+    if imagesStr := ctx.FormValue("delete_images"); imagesStr != "" {
+		deleteImages = strings.Split(imagesStr, ",")
+	}
 
+	files := form.File["images"]
 	var fileHeaders []multipart.FileHeader
     for _, file := range files {
         fileHeaders = append(fileHeaders, *file)
@@ -214,14 +210,31 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	if news.Title == "" {
-		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
-			"status":      fiber.ErrBadRequest.Message,
-			"status_code": fiber.ErrBadRequest.Code,
-			"message":     "title cannot be empty",
-			"result":      nil,
-		})
-	}
+	if len(deleteImages) > 0 || len(fileHeaders) > 0 {
+        existingNews, err := c.newsusecase.GetNewsByID(id)
+        if err != nil {
+            return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
+                "status":      "Error",
+                "status_code": fiber.StatusNotFound,
+                "message":     "News not found",
+                "result":      nil,
+            })
+        }
+        
+        remainingImagesCount := len(existingNews.Images) - len(deleteImages) + len(fileHeaders)
+        if len(fileHeaders) > 0 {
+			remainingImagesCount += len(fileHeaders)
+		}
+		
+		if remainingImagesCount < 1 {
+            return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+                "status":      "Error",
+                "status_code": fiber.StatusBadRequest,
+                "message":     "News must have at least one image",
+                "result":      nil,
+            })
+        }
+    }
 
 	if len(news.Dialog) == 0 {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
@@ -232,7 +245,7 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	updatedNews, err := c.newsusecase.UpdateNewsByID(id, news, fileHeaders, ctx)
+	updatedNews, err := c.newsusecase.UpdateNewsByID(id, news, fileHeaders, deleteImages, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,

@@ -17,7 +17,7 @@ type NewsUseCase interface {
 	GetAllNews() ([]entities.News, error)
 	GetNewsByID(id string) (*entities.News, error)
 	GetNewsNextID() (string, error)
-	UpdateNewsByID(id string, news entities.News, files []multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error)
+	UpdateNewsByID(id string, news entities.News, files []multipart.FileHeader, imagesToDelete []string, ctx *fiber.Ctx) (*entities.News, error)
 }
 
 type NewsUseCaseImpl struct {
@@ -98,7 +98,7 @@ func (u *NewsUseCaseImpl) GetNewsNextID() (string, error) {
 	return u.newsrepo.GetNewsNextID()
 }
 
-func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, files []multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error) {
+func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, files []multipart.FileHeader, imagesToDelete []string, ctx *fiber.Ctx) (*entities.News, error) {
 	if len(files) == 0 {
 		return nil, ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "message": "at least one image is required",
@@ -117,8 +117,9 @@ func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, files []
 			return nil, err
 		}
 	}
-	if err := u.newsrepo.RemoveImages(id); err != nil {
-		return nil, err
+
+	if len(deleteImages) > 0 {
+		existingNews.Images = filterOutImages(existingNews.Images, deleteImages)
 	}
 
     var newImages []entities.Image
