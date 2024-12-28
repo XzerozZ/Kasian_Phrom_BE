@@ -91,7 +91,26 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
 	})
 }
 
-func(c *NewsController) GetNewsByIDHandler(ctx *fiber.Ctx) error {
+func (c *NewsController) GetAllNewsHandler(ctx *fiber.Ctx) error {
+	data, err := c.newsusecase.GetAllNews()
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrInternalServerError.Message,
+			"status_code": 	fiber.ErrInternalServerError.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+	
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      	"Success",
+		"status_code": 	fiber.StatusOK,
+		"message":     	"Nursing houses retrieved successfully",
+		"result":      	data,
+	})
+}
+
+func (c *NewsController) GetNewsByIDHandler(ctx *fiber.Ctx) error {
 	id := ctx.Params("id")
 	data, err := c.newsusecase.GetNewsByID(id)
 	if err != nil {

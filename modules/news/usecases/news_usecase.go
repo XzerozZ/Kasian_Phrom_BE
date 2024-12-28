@@ -14,6 +14,7 @@ import (
 
 type NewsUseCase interface {
 	CreateNews(news *entities.News, files []multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error)
+	GetAllNews() ([]entities.News, error)
 	GetNewsByID(id string) (*entities.News, error)
 	GetNewsNextID() (string, error)
 }
@@ -82,6 +83,10 @@ func (u *NewsUseCaseImpl) CreateNews(news *entities.News, files []multipart.File
     }
     
     return createdNews, nil
+}
+
+func (u *NewsUseCaseImpl) GetAllNews() ([]entities.News, error) {
+	return u.newsrepo.GetAllNews()
 }
 
 func (u *NewsUseCaseImpl) GetNewsByID(id string) (*entities.News, error) {

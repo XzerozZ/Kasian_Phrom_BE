@@ -18,6 +18,7 @@ func NewGormNewsRepository(db *gorm.DB) *GormNewsRepository {
 
 type NewsRepository interface {
 	CreateNews(news *entities.News, images []entities.Image) (*entities.News, error)
+	GetAllNews() ([]entities.News, error)
 	GetNewsByID(id string) (*entities.News, error)
 	GetNewsNextID() (string, error)
 }
@@ -46,6 +47,15 @@ func (r *GormNewsRepository) CreateNews(news *entities.News, images []entities.I
 	}
 
 	return r.GetNewsByID(news.ID)
+}
+
+func(r *GormNewsRepository) GetAllNews() ([]entities.News, error){
+	var news []entities.News
+	if err := r.db.Preload("Images").Find(&news).Error; err != nil {
+		return nil, err
+	}
+
+	return news , nil
 }
 
 func (r *GormNewsRepository) GetNewsByID(id string) (*entities.News, error) {

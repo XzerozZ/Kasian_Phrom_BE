@@ -70,6 +70,7 @@ func (c *NhController) GetAllNhHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
+
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
@@ -88,6 +89,7 @@ func (c *NhController) GetAllActiveNhHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
+
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
@@ -106,6 +108,7 @@ func (c *NhController) GetAllInactiveNhHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
+	
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
