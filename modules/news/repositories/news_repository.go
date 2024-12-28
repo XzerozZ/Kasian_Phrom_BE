@@ -21,6 +21,10 @@ type NewsRepository interface {
 	GetAllNews() ([]entities.News, error)
 	GetNewsByID(id string) (*entities.News, error)
 	GetNewsNextID() (string, error)
+	UpdateNewsByID(news *entities.News) (*entities.News, error)
+	AddImages(id string, images []entities.Image) (*entities.News, error)
+    RemoveImages(id string) error
+	DeleteDialog(id string) error
 }
 
 func (r *GormNewsRepository) CreateNews(news *entities.News, images []entities.Image) (*entities.News, error) {
@@ -79,4 +83,70 @@ func (r *GormNewsRepository) GetNewsNextID() (string, error) {
 	nextID := maxIDInt + 1
 	formattedID := fmt.Sprintf("%05d", nextID)
 	return formattedID, nil
+}
+
+func (r *GormNewsRepository) UpdateNewsByID(news *entities.News) (*entities.News, error) {
+	if err := r.db.Save(&news).Error; err != nil {
+		return nil, err
+	}
+
+	return r.GetNewsByID(news.ID)
+}
+
+func (r *GormNewsRepository) AddImages(id string, images []entities.Image) (*entities.News, error) {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+        var news entities.News
+        if err := tx.First(&news, id).Error; err != nil {
+            return err
+        }
+        
+        for i := range images {
+            if err := tx.Create(&images[i]).Error; err != nil {
+                return err
+            }
+        }
+        
+        return tx.Model(&news).Association("Images").Append(images)
+    })
+
+    if err != nil {
+        return nil, err
+    }
+
+    return r.GetNewsByID(id)
+}
+
+func (r *GormNewsRepository) RemoveImages(id string) error {
+    return r.db.Transaction(func(tx *gorm.DB) error {
+        var news entities.News
+		if err := tx.Where("id = ?", id).First(&news).Error; err != nil {
+            return err
+        }
+
+        var images []entities.Image
+        if err := tx.Model(&news).Association("Images").Find(&images); err != nil {
+            return err
+        }
+
+        if err := tx.Model(&news).Association("Images").Clear(); err != nil {
+            return err
+        }
+
+        if len(images) > 0 {
+            var imageIDs []string
+            for _, img := range images {
+                imageIDs = append(imageIDs, img.ID)
+            }
+
+            if err := tx.Unscoped().Where("id IN ?", imageIDs).Delete(&entities.Image{}).Error; err != nil {
+                return err
+            }
+        }
+
+        return nil
+    })
+}
+
+func (r *GormNewsRepository) DeleteDialog(id string) error {
+	return r.db.Where("id = ?", id).Delete(&entities.Dialog{}).Error
 }

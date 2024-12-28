@@ -37,6 +37,15 @@ func (c *NhController) CreateNhHandler(ctx *fiber.Ctx) error {
 	}
 
 	files := form.File["images"]
+	if len(files) == 0 {
+        return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":      "Error",
+            "status_code": fiber.StatusBadRequest,
+            "message":     "At least one image is required",
+            "result":      nil,
+        })
+    }
+	
 	var fileHeaders []multipart.FileHeader
     for _, file := range files {
         fileHeaders = append(fileHeaders, *file)
@@ -108,7 +117,7 @@ func (c *NhController) GetAllInactiveNhHandler(ctx *fiber.Ctx) error {
 			"result":      	nil,
 		})
 	}
-	
+
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
@@ -179,6 +188,15 @@ func (c *NhController) UpdateNhByIDHandler(ctx *fiber.Ctx) error {
     }
 
     files := form.File["images"]
+	if len(files) == 0 {
+        return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "status":      "Error",
+            "status_code": fiber.StatusBadRequest,
+            "message":     "At least one image is required",
+            "result":      nil,
+        })
+    }
+
     var fileHeaders []multipart.FileHeader
     for _, file := range files {
         fileHeaders = append(fileHeaders, *file)
