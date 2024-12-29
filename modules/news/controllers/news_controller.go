@@ -265,3 +265,23 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 		"result":      	updatedNews,
 	})
 }
+
+func (c *NewsController) DeleteNewsByIDHandler(ctx *fiber.Ctx) error {
+    id := ctx.Params("id")
+    err := c.newsusecase.DeleteNewsByID(id)
+    if err != nil {
+        return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "status":      "Error",
+            "status_code": fiber.StatusInternalServerError,
+            "message":     err.Error(),
+            "result":      nil,
+        })
+    }
+
+    return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+        "status":      "Success",
+        "status_code": fiber.StatusOK,
+        "message":     "News deleted successfully",
+        "result":      nil,
+    })
+}

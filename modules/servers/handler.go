@@ -54,6 +54,7 @@ func SetupNewsRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
 	newsGroup.Get("/id" , newsController.GetNewsNextIDHandler)
 	newsGroup.Get("/:id", newsController.GetNewsByIDHandler)
 	newsGroup.Put("/:id", newsController.UpdateNewsByIDHandler)
+	newsGroup.Delete("/:id", newsController.DeleteNewsByIDHandler)
 }
 
 func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.Supabase) {

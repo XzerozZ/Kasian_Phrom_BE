@@ -25,6 +25,7 @@ type NewsRepository interface {
 	AddImages(id string, images []entities.Image) (*entities.News, error)
     RemoveImages(id string, imageID *string) error
 	DeleteDialog(id string) error
+	DeleteNewsByID(id string) error
 }
 
 func (r *GormNewsRepository) CreateNews(news *entities.News, images []entities.Image) (*entities.News, error) {
@@ -156,4 +157,22 @@ func (r *GormNewsRepository) RemoveImages(id string, imageID *string) error {
 
 func (r *GormNewsRepository) DeleteDialog(id string) error {
 	return r.db.Where("id = ?", id).Delete(&entities.Dialog{}).Error
+}
+
+func (r *GormNewsRepository) DeleteNewsByID(id string) error {
+    return r.db.Transaction(func(tx *gorm.DB) error {
+        if err := tx.Table("news_images").Where("news_id = ?", id).Delete(nil).Error; err != nil {
+            return err
+        }
+
+        if err := tx.Where("news_id = ?", id).Delete(&entities.Dialog{}).Error; err != nil {
+            return err
+        }
+
+        if err := tx.Where("id = ?", id).Delete(&entities.News{}).Error; err != nil {
+            return err
+        }
+
+        return nil
+    })
 }

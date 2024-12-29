@@ -18,6 +18,7 @@ type NewsUseCase interface {
 	GetNewsByID(id string) (*entities.News, error)
 	GetNewsNextID() (string, error)
 	UpdateNewsByID(id string, news entities.News, files []multipart.FileHeader, imagesToDelete []string, ctx *fiber.Ctx) (*entities.News, error)
+	DeleteNewsByID(id string) error
 }
 
 type NewsUseCaseImpl struct {
@@ -170,4 +171,29 @@ func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, files []
     }
 
 	return updatedNews, nil
+}
+
+func (u *NewsUseCaseImpl) DeleteNewsByID(id string) error {
+    existingNews, err := u.newsrepo.GetNewsByID(id)
+    if err != nil {
+        return err
+    }
+
+    for _, dialog := range existingNews.Dialog {
+        if err := u.newsrepo.DeleteDialog(dialog.ID); err != nil {
+            return err
+        }
+    }
+
+    for _, image := range existingNews.Images {
+        if err := u.newsrepo.RemoveImages(existingNews.ID, &image.ID); err != nil {
+            return err
+        }
+    }
+
+    if err := u.newsrepo.DeleteNewsByID(id); err != nil {
+        return err
+    }
+
+    return nil
 }
