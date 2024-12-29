@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"strings"
 	"mime/multipart"
   	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/usecases"
@@ -187,22 +188,47 @@ func (c *NhController) UpdateNhByIDHandler(ctx *fiber.Ctx) error {
         })
     }
 
-    files := form.File["images"]
-	if len(files) == 0 {
-        return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "status":      "Error",
-            "status_code": fiber.StatusBadRequest,
-            "message":     "At least one image is required",
-            "result":      nil,
-        })
-    }
+	var deleteImages []string
+    if imagesStr := ctx.FormValue("delete_images"); imagesStr != "" {
+		deleteImages = strings.Split(imagesStr, ",")
+	} else {
+		deleteImages = []string{} 
+	}
 
     var fileHeaders []multipart.FileHeader
-    for _, file := range files {
-        fileHeaders = append(fileHeaders, *file)
+    if files := form.File["images"]; len(files) > 0 {
+        for _, file := range files {
+            fileHeaders = append(fileHeaders, *file)
+        }
     }
 
-	updatedNh, err := c.nhusecase.UpdateNhByID(id, nursingHouse, fileHeaders, ctx)
+    if len(deleteImages) > 0 || len(fileHeaders) > 0 {
+        existingNh, err := c.nhusecase.GetNhByID(id)
+        if err != nil {
+            return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
+                "status":      "Error",
+                "status_code": fiber.StatusNotFound,
+                "message":     "News not found",
+                "result":      nil,
+            })
+        }
+        
+        remainingImagesCount := len(existingNh.Images) - len(deleteImages) + len(fileHeaders)
+        if len(fileHeaders) > 0 {
+			remainingImagesCount += len(fileHeaders)
+		}
+		
+		if remainingImagesCount < 1 {
+            return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+                "status":      "Error",
+                "status_code": fiber.StatusBadRequest,
+                "message":     "News must have at least one image",
+                "result":      nil,
+            })
+        }
+    }
+
+	updatedNh, err := c.nhusecase.UpdateNhByID(id, nursingHouse, fileHeaders, deleteImages, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,

@@ -19,7 +19,7 @@ type NhUseCase interface {
 	GetInactiveNh() ([]entities.NursingHouse, error)
 	GetNhByID(id string) (*entities.NursingHouse, error)
 	GetNhNextID() (string, error)
-	UpdateNhByID(id string, nursingHouse entities.NursingHouse, files []multipart.FileHeader, ctx *fiber.Ctx) (*entities.NursingHouse, error)
+	UpdateNhByID(id string, nursingHouse entities.NursingHouse, files []multipart.FileHeader, imagesToDelete []string, ctx *fiber.Ctx) (*entities.NursingHouse, error)
 }
 
 type NhUseCaseImpl struct {
@@ -105,18 +105,12 @@ func (u *NhUseCaseImpl) GetNhNextID() (string, error) {
 	return u.nhrepo.GetNhNextID()
 }
 
-func (u *NhUseCaseImpl) UpdateNhByID(id string, nursingHouse entities.NursingHouse, files []multipart.FileHeader, ctx *fiber.Ctx) (*entities.NursingHouse, error) {
+func (u *NhUseCaseImpl) UpdateNhByID(id string, nursingHouse entities.NursingHouse, files []multipart.FileHeader, imagesToDelete []string, ctx *fiber.Ctx) (*entities.NursingHouse, error) {
 	if nursingHouse.Price <= 0 {
 		return nil, ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "message": "price must be greater than zero",
         })
     }
-
-	if len(files) == 0 {
-		return nil, ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "message": "at least one image is required",
-        })
-	}
 
 	existingNh, err := u.nhrepo.GetNhByID(id)
 	if err != nil {
@@ -133,43 +127,49 @@ func (u *NhUseCaseImpl) UpdateNhByID(id string, nursingHouse entities.NursingHou
 	existingNh.Time = nursingHouse.Time
 	existingNh.Status = nursingHouse.Status
 
-	if err := u.nhrepo.RemoveImages(id); err != nil {
-		return nil, err
-	}
+	if len(imagesToDelete) > 0 {
+        for _, imageID := range imagesToDelete {
+            if err := u.nhrepo.RemoveImages(id, &imageID); err != nil {
+                return nil, err
+            }
+        }
+    }
 
     var newImages []entities.Image
-	for _, file := range files {
-		fileName := uuid.New().String() + ".jpg"
-		if err := ctx.SaveFile(&file, "./uploads/"+fileName); err != nil {
-			return nil, err
-		}
+	if len(files) > 0 {
+        for _, file := range files {
+            fileName := uuid.New().String() + ".jpg"
+            if err := ctx.SaveFile(&file, "./uploads/"+fileName); err != nil {
+                return nil, err
+            }
 
-		imageUrl, err := utils.UploadImage(fileName, "", u.config)
-		if err != nil {
-			os.Remove("./uploads/" + fileName)
-			return nil, err
-		}
+            imageUrl, err := utils.UploadImage(fileName, "", u.config)
+            if err != nil {
+                os.Remove("./uploads/" + fileName)
+                return nil, err
+            }
 
-		if err := os.Remove("./uploads/" + fileName); err != nil {
-			return nil, err
-		}
+            if err := os.Remove("./uploads/" + fileName); err != nil {
+                return nil, err
+            }
 
-		newImages = append(newImages, entities.Image{
-			ID:        uuid.New().String(),
-			ImageLink: imageUrl,
-		})
-	}
+            newImages = append(newImages, entities.Image{
+                ID:        uuid.New().String(),
+                ImageLink: imageUrl,
+            })
+        }
+    }
 
 	existingNh.Images = newImages
 	if len(newImages) > 0 {
+		existingNh.Images = append(existingNh.Images, newImages...)
 		_, err = u.nhrepo.AddImages(id, newImages)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	var updatedNh *entities.NursingHouse
-	updatedNh, err = u.nhrepo.UpdateNhByID(existingNh)
+	updatedNh, err := u.nhrepo.UpdateNhByID(existingNh)
     if err != nil {
         return nil, err
     }

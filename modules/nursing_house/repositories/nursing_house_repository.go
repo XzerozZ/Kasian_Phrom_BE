@@ -25,7 +25,7 @@ type NhRepository interface {
 	GetNhNextID() (string, error)
 	UpdateNhByID(nursingHouse *entities.NursingHouse) (*entities.NursingHouse, error)
 	AddImages(id string, images []entities.Image) (*entities.NursingHouse, error)
-    RemoveImages(id string) error
+    RemoveImages(id string, imageID *string) error
 }
 
 func (r *GormNhRepository) CreateNh(nursingHouse *entities.NursingHouse, images []entities.Image) (*entities.NursingHouse, error) {
@@ -137,33 +137,40 @@ func (r *GormNhRepository) AddImages(id string, images []entities.Image) (*entit
     return r.GetNhByID(id)
 }
 
-func (r *GormNhRepository) RemoveImages(id string) error {
-    return r.db.Transaction(func(tx *gorm.DB) error {
-        var nh entities.NursingHouse
-		if err := tx.Where("id = ?", id).First(&nh).Error; err != nil {
+func (r *GormNhRepository) RemoveImages(id string, imageID *string) error {
+    var imagesToDelete []entities.Image
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+        var nursingHouse entities.NursingHouse
+		if err := tx.Preload("Images").Where("id = ?", id).First(&nursingHouse).Error; err != nil {
             return err
         }
 
-        var images []entities.Image
-        if err := tx.Model(&nh).Association("Images").Find(&images); err != nil {
+        for _, img := range nursingHouse.Images {
+			if img.ID == *imageID {
+				imagesToDelete = append(imagesToDelete, img)
+				break
+			}
+		}
+
+		var imageIDs []string
+        for _, img := range imagesToDelete {
+            imageIDs = append(imageIDs, img.ID)
+        }
+
+        if err := tx.Model(&nursingHouse).Association("Images").Delete(imagesToDelete); err != nil {
             return err
         }
 
-        if err := tx.Model(&nh).Association("Images").Clear(); err != nil {
+		if err := tx.Where("id IN ?", imageIDs).Delete(&entities.Image{}).Error; err != nil {
             return err
-        }
-
-        if len(images) > 0 {
-            var imageIDs []string
-            for _, img := range images {
-                imageIDs = append(imageIDs, img.ID)
-            }
-
-            if err := tx.Unscoped().Where("id IN ?", imageIDs).Delete(&entities.Image{}).Error; err != nil {
-                return err
-            }
         }
 
         return nil
     })
+
+	if err != nil {
+        return err
+    }
+
+	return  nil
 }

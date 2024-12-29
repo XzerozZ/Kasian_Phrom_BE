@@ -195,12 +195,15 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 	var deleteImages []string
     if imagesStr := ctx.FormValue("delete_images"); imagesStr != "" {
 		deleteImages = strings.Split(imagesStr, ",")
+	} else {
+		deleteImages = []string{} 
 	}
 
-	files := form.File["images"]
 	var fileHeaders []multipart.FileHeader
-    for _, file := range files {
-        fileHeaders = append(fileHeaders, *file)
+    if files := form.File["images"]; len(files) > 0 {
+        for _, file := range files {
+            fileHeaders = append(fileHeaders, *file)
+        }
     }
 
 	for i := 0; i < len(types); i++ {
