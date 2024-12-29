@@ -19,6 +19,7 @@ import (
 type UserUseCase interface {
 	Register(user *entities.User, roleName string) (*entities.User, error)
 	Login(email, password string) (string, *entities.User, error)
+	LoginAdmin(email, password string) (string, *entities.User, error)
 	UpdateUserByID(id string, user entities.User, files multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
 }
 
@@ -53,6 +54,35 @@ func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entit
 	user.Password = string(hashedPassword)
 	return u.userrepo.CreateUser(user)
 }
+
+func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.User, error) {
+	user, err := u.userrepo.FindUserByEmail(email)
+	if err != nil {
+		return "", nil, errors.New("invalid email or password")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		return "", nil, errors.New("invalid email or password")
+	}
+
+	if user.Role.RoleName != "Admin" {
+		return "", nil, errors.New("access denied: only admins can login")
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": user.ID,
+		"role":    user.Role.RoleName,
+		"exp":     time.Now().Add(time.Hour * 72).Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte(u.jwtSecret))
+	if err != nil {
+		return "", nil, err
+	}
+	
+	return tokenString, &user, nil
+}
+
 
 func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User, error) {
 	user, err := u.userrepo.FindUserByEmail(email)

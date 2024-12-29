@@ -94,6 +94,44 @@ func (c *UserController) LoginHandler(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *UserController) LoginAdminHandler(ctx *fiber.Ctx) error {
+	var req struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	if err := ctx.BodyParser(&req); err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrInternalServerError.Message,
+			"status_code": 	fiber.ErrInternalServerError.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+
+	token, user, err := c.userusecase.LoginAdmin(req.Email, req.Password)
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrInternalServerError.Message,
+			"status_code": 	fiber.ErrInternalServerError.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      	"Success",
+		"status_code": 	fiber.StatusOK,
+		"message": 		"Login successful",
+		"result":     	fiber.Map{
+			"token":       token,
+			"u_id":        user.ID,
+			"uname":	   user.Username,
+			"role":        user.Role.RoleName,
+		},
+	})
+}
+
 func (c *UserController) LogoutHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",

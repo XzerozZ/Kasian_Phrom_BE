@@ -65,6 +65,7 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 	authGroup := app.Group("/auth")
 	authGroup.Post("/register", userController.RegisterHandler)
 	authGroup.Post("/login", userController.LoginHandler)
+	authGroup.Post("/admin/login", userController.LoginAdminHandler)
 	authGroup.Post("/logout", middlewares.JWTMiddleware(jwt), userController.LogoutHandler)
 
 	userGroup := app.Group("/user")
