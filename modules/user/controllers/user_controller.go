@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"mime/multipart"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
 
@@ -164,18 +165,13 @@ func (c *UserController) UpdateUserByIDHandler(ctx *fiber.Ctx) error {
     }
 
 	
-    files := form.File["images"]
-    if len(files) == 0 {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":      "Error",
-			"status_code": fiber.StatusBadRequest,
-			"message":     "No file provided",
-			"result":      nil,
-		})
+    var file *multipart.FileHeader
+	files := form.File["images"]
+	if len(files) > 0 {
+		file = files[0]
 	}
 
-	file := files[0]
-	updatedUser, err := c.userusecase.UpdateUserByID(id, user, *file, ctx)
+	updatedUser, err := c.userusecase.UpdateUserByID(id, user, file, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,

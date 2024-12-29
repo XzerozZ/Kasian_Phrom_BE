@@ -20,7 +20,7 @@ type UserUseCase interface {
 	Register(user *entities.User, roleName string) (*entities.User, error)
 	Login(email, password string) (string, *entities.User, error)
 	LoginAdmin(email, password string) (string, *entities.User, error)
-	UpdateUserByID(id string, user entities.User, files multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
+	UpdateUserByID(id string, user entities.User, files *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
 }
 
 type UserUseCaseImpl struct {
@@ -108,7 +108,7 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 	return tokenString, &user, nil
 }
 
-func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error) {
+func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error) {
 	existingUser, err := u.userrepo.GetUserByID(id)
 	if err != nil {
 		return nil, err
@@ -118,24 +118,26 @@ func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file mul
 	existingUser.Lastname = user.Lastname
 	existingUser.Username = user.Username
 	existingUser.Email = user.Email
-	fileName := uuid.New().String() + ".jpg"
-	if err := ctx.SaveFile(&file, "./uploads/"+fileName); err != nil {
-		return nil, err
+	if file != nil {
+		fileName := uuid.New().String() + ".jpg"
+		if err := ctx.SaveFile(file, "./uploads/"+fileName); err != nil {
+			return nil, err
+		}
+
+		imageUrl, err := utils.UploadImage(fileName, "", u.supa)
+		if err != nil {
+			os.Remove("./uploads/" + fileName)
+			return nil, err
+		}
+
+		if err := os.Remove("./uploads/" + fileName); err != nil {
+			return nil, err
+		}
+
+		existingUser.ImageLink = imageUrl
 	}
 
-	imageUrl, err := utils.UploadImage(fileName, "", u.supa)
-	if err != nil {
-		os.Remove("./uploads/" + fileName)
-		return nil, err
-	}
-
-	if err := os.Remove("./uploads/" + fileName); err != nil {
-		return nil, err
-	}
-
-	existingUser.ImageLink = imageUrl
-	var updatedUser *entities.User
-	updatedUser, err = u.userrepo.UpdateUserByID(existingUser)
+	updatedUser, err := u.userrepo.UpdateUserByID(existingUser)
     if err != nil {
         return nil, err
     }
