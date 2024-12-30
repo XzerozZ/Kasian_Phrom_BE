@@ -13,11 +13,11 @@ import (
 )
 
 type NewsUseCase interface {
-	CreateNews(news *entities.News, files []multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error)
+	CreateNews(news *entities.News, imageTitleFile *multipart.FileHeader, imageDescFile *multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error)
 	GetAllNews() ([]entities.News, error)
 	GetNewsByID(id string) (*entities.News, error)
 	GetNewsNextID() (string, error)
-	UpdateNewsByID(id string, news entities.News, files []multipart.FileHeader, imagesToDelete []string, ctx *fiber.Ctx) (*entities.News, error)
+	UpdateNewsByID(id string, news entities.News, imageTitleFile *multipart.FileHeader, imageDescFile *multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error)
 	DeleteNewsByID(id string) error
 }
 
@@ -33,10 +33,48 @@ func NewNewsUseCase(newsrepo repositories.NewsRepository, config configs.Supabas
 	}
 }
 
-func (u *NewsUseCaseImpl) CreateNews(news *entities.News, files []multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error) {
+func (u *NewsUseCaseImpl) CreateNews(news *entities.News, imageTitleFile *multipart.FileHeader, imageDescFile *multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error) {
 	id, err := u.newsrepo.GetNewsNextID()
 	if err != nil {
 		return nil, err
+	}
+
+	if imageTitleFile != nil {
+		fileName := uuid.New().String() + "_title.jpg"
+		if err := ctx.SaveFile(imageTitleFile, "./uploads/"+fileName); err != nil {
+			return nil, err
+		}
+
+		imageUrl, err := utils.UploadImage(fileName, "", u.config)
+		if err != nil {
+			os.Remove("./uploads/" + fileName)
+			return nil, err
+		}
+
+		if err := os.Remove("./uploads/" + fileName); err != nil {
+			return nil, err
+		}
+
+		news.Image_Title = imageUrl
+	}
+
+	if imageDescFile != nil {
+		fileName := uuid.New().String() + "_desc.jpg"
+		if err := ctx.SaveFile(imageDescFile, "./uploads/"+fileName); err != nil {
+			return nil, err
+		}
+
+		imageUrl, err := utils.UploadImage(fileName, "", u.config)
+		if err != nil {
+			os.Remove("./uploads/" + fileName)
+			return nil, err
+		}
+
+		if err := os.Remove("./uploads/" + fileName); err != nil {
+			return nil, err
+		}
+
+		news.Image_Desc = imageUrl
 	}
 
 	for i, dialogReq := range news.Dialog {
@@ -48,39 +86,9 @@ func (u *NewsUseCaseImpl) CreateNews(news *entities.News, files []multipart.File
 			NewsID: id,
 		}
 	}
-
-	if len(files) == 0 {
-		return nil, ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "message": "at least one image is required",
-        })
-	}
 	
 	news.ID = id
-	var images []entities.Image
-    for _, file := range files {
-		fileName := uuid.New().String() + ".jpg"
-		if err := ctx.SaveFile(&file, "./uploads/"+fileName); err != nil {
-			return nil, err
-		}
-	
-		imageUrl, err := utils.UploadImage(fileName, "", u.config)
-		if err != nil {
-			return nil, err
-		}
-        
-		err = os.Remove("./uploads/" + fileName)
-    	if err != nil {
-        	return nil, err
-    	}
-
-        images = append(images, entities.Image{
-            ID:  		uuid.New().String(),
-            ImageLink:  imageUrl,
-        })
-    }
-
-	var createdNews *entities.News
-	createdNews, err = u.newsrepo.CreateNews(news, images)
+	createdNews, err := u.newsrepo.CreateNews(news)
     if err != nil {
         return nil, err
     }
@@ -100,52 +108,55 @@ func (u *NewsUseCaseImpl) GetNewsNextID() (string, error) {
 	return u.newsrepo.GetNewsNextID()
 }
 
-func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, files []multipart.FileHeader, imagesToDelete []string, ctx *fiber.Ctx) (*entities.News, error) {
+func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, imageTitleFile *multipart.FileHeader, imageDescFile *multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error) {
 	existingNews, err := u.newsrepo.GetNewsByID(id)
 	if err != nil {
 		return nil, err
 	}
 	
 	existingNews.Title = news.Title
-	
+	if imageTitleFile != nil {
+		fileName := uuid.New().String() + "_title.jpg"
+		if err := ctx.SaveFile(imageTitleFile, "./uploads/"+fileName); err != nil {
+			return nil, err
+		}
+
+		imageUrl, err := utils.UploadImage(fileName, "", u.config)
+		if err != nil {
+			os.Remove("./uploads/" + fileName)
+			return nil, err
+		}
+
+		if err := os.Remove("./uploads/" + fileName); err != nil {
+			return nil, err
+		}
+
+		existingNews.Image_Title = imageUrl
+	}
+
+	if imageDescFile != nil {
+		fileName := uuid.New().String() + "_desc.jpg"
+		if err := ctx.SaveFile(imageDescFile, "./uploads/"+fileName); err != nil {
+			return nil, err
+		}
+
+		imageUrl, err := utils.UploadImage(fileName, "", u.config)
+		if err != nil {
+			os.Remove("./uploads/" + fileName)
+			return nil, err
+		}
+
+		if err := os.Remove("./uploads/" + fileName); err != nil {
+			return nil, err
+		}
+
+		existingNews.Image_Desc = imageUrl
+	}
 	for _, dialog := range existingNews.Dialog {
 		if err := u.newsrepo.DeleteDialog(dialog.ID); err != nil {
 			return nil, err
 		}
 	}
-
-	if len(imagesToDelete) > 0 {
-        for _, imageID := range imagesToDelete {
-            if err := u.newsrepo.RemoveImages(id, &imageID); err != nil {
-                return nil, err
-            }
-        }
-    }
-
-    var newImages []entities.Image
-	if len(files) > 0 {
-        for _, file := range files {
-            fileName := uuid.New().String() + ".jpg"
-            if err := ctx.SaveFile(&file, "./uploads/"+fileName); err != nil {
-                return nil, err
-            }
-
-            imageUrl, err := utils.UploadImage(fileName, "", u.config)
-            if err != nil {
-                os.Remove("./uploads/" + fileName)
-                return nil, err
-            }
-
-            if err := os.Remove("./uploads/" + fileName); err != nil {
-                return nil, err
-            }
-
-            newImages = append(newImages, entities.Image{
-                ID:        uuid.New().String(),
-                ImageLink: imageUrl,
-            })
-        }
-    }
 	
 	for i, dialogReq := range news.Dialog {
 		news.Dialog[i] = entities.Dialog{
@@ -158,15 +169,6 @@ func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, files []
 	}
 
 	existingNews.Dialog = news.Dialog
-	existingNews.Images = newImages
-	if len(newImages) > 0 {
-		existingNews.Images = append(existingNews.Images, newImages...)
-		_, err = u.newsrepo.AddImages(id, newImages)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	updatedNews, err := u.newsrepo.UpdateNewsByID(existingNews)
     if err != nil {
         return nil, err
@@ -183,12 +185,6 @@ func (u *NewsUseCaseImpl) DeleteNewsByID(id string) error {
 
     for _, dialog := range existingNews.Dialog {
         if err := u.newsrepo.DeleteDialog(dialog.ID); err != nil {
-            return err
-        }
-    }
-
-    for _, image := range existingNews.Images {
-        if err := u.newsrepo.RemoveImages(existingNews.ID, &image.ID); err != nil {
             return err
         }
     }

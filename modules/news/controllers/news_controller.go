@@ -1,9 +1,7 @@
 package controllers
 
 import (
-	"strings"
 	"strconv"
-	"mime/multipart"
   	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
 
@@ -19,10 +17,6 @@ func NewNewsController(newsusecase usecases.NewsUseCase) *NewsController {
 }
 
 func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
-	req := &entities.News{
-		Title: ctx.FormValue("title"),
-	}
-
 	form, err := ctx.MultipartForm()
 	if err != nil {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
@@ -31,6 +25,31 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
 			"message":     "invalid form data",
 			"result":      nil,
 		})
+	}
+
+	title := form.Value["title"]
+	imageTitleFile, err := ctx.FormFile("image_title")
+	if err != nil && err != fiber.ErrUnprocessableEntity {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Invalid image_title file",
+			"result":      nil,
+		})
+	}
+
+	imageDescFile, _ := ctx.FormFile("image_desc")
+	if len(title) == 0  {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "title cannot be empty",
+			"result":      nil,
+		})
+	}
+
+	req := &entities.News{
+		Title: title[0],
 	}
 
 	types := form.Value["type"]
@@ -44,21 +63,6 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
-
-	files := form.File["images"]
-	if len(files) == 0 {
-        return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "status":      "Error",
-            "status_code": fiber.StatusBadRequest,
-            "message":     "At least one image is required",
-            "result":      nil,
-        })
-    }
-
-	var fileHeaders []multipart.FileHeader
-    for _, file := range files {
-        fileHeaders = append(fileHeaders, *file)
-    }
 
 	for i := 0; i < len(types); i++ {
 		bold, err := strconv.ParseBool(bolds[i])
@@ -78,15 +82,6 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	if req.Title == "" {
-		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
-			"status":      fiber.ErrBadRequest.Message,
-			"status_code": fiber.ErrBadRequest.Code,
-			"message":     "title cannot be empty",
-			"result":      nil,
-		})
-	}
-
 	if len(req.Dialog) == 0 {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
 			"status":      fiber.ErrBadRequest.Message,
@@ -96,7 +91,7 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	data, err := c.newsusecase.CreateNews(req, fileHeaders, ctx)
+	data, err := c.newsusecase.CreateNews(req, imageTitleFile, imageDescFile, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrInternalServerError.Message,
@@ -109,7 +104,7 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status":		"Success",
 		"status_code": 	fiber.StatusOK,
-		"message":     	"Nursing house created successfully",
+		"message":     	"News created successfully",
 		"result":      	data,
 	})
 }
@@ -128,7 +123,7 @@ func (c *NewsController) GetAllNewsHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
-		"message":     	"Nursing houses retrieved successfully",
+		"message":     	"News retrieved successfully",
 		"result":      	data,
 	})
 }
@@ -148,7 +143,7 @@ func (c *NewsController) GetNewsByIDHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
-		"message":     	"Nursing house retrieved successfully",
+		"message":     	"News retrieved successfully",
 		"result":      	data,
 	})
 }
@@ -167,23 +162,13 @@ func (c *NewsController) GetNewsNextIDHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
-		"message":     	"Nursing house retrieved successfully",
+		"message":     	"News retrieved successfully",
 		"result":      	data,
 	})
 }
 
 func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 	id := ctx.Params("id")
-	var news entities.News
-	if err := ctx.BodyParser(&news); err != nil {
-		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
-		})
-	}
-	
 	form, err := ctx.MultipartForm()
 	if err != nil {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
@@ -194,6 +179,23 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 	
+	title := form.Value["title"]
+	imageTitleFile, _ := ctx.FormFile("image_title")
+	imageDescFile, _ := ctx.FormFile("image_desc")
+
+	if len(title) == 0 {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "title cannot be empty",
+			"result":      nil,
+		})
+	}
+
+	news := entities.News{
+		Title: title[0],
+	}
+
 	types := form.Value["type"]
 	descs := form.Value["desc"]
 	bolds := form.Value["bold"]
@@ -205,20 +207,6 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
-
-	var deleteImages []string
-    if imagesStr := ctx.FormValue("delete_images"); imagesStr != "" {
-		deleteImages = strings.Split(imagesStr, ",")
-	} else {
-		deleteImages = []string{} 
-	}
-
-	var fileHeaders []multipart.FileHeader
-    if files := form.File["images"]; len(files) > 0 {
-        for _, file := range files {
-            fileHeaders = append(fileHeaders, *file)
-        }
-    }
 
 	for i := 0; i < len(types); i++ {
 		bold, err := strconv.ParseBool(bolds[i])
@@ -238,32 +226,6 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	if len(deleteImages) > 0 || len(fileHeaders) > 0 {
-        existingNews, err := c.newsusecase.GetNewsByID(id)
-        if err != nil {
-            return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
-                "status":      "Error",
-                "status_code": fiber.StatusNotFound,
-                "message":     "News not found",
-                "result":      nil,
-            })
-        }
-        
-        remainingImagesCount := len(existingNews.Images) - len(deleteImages) + len(fileHeaders)
-        if len(fileHeaders) > 0 {
-			remainingImagesCount += len(fileHeaders)
-		}
-		
-		if remainingImagesCount < 1 {
-            return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-                "status":      "Error",
-                "status_code": fiber.StatusBadRequest,
-                "message":     "News must have at least one image",
-                "result":      nil,
-            })
-        }
-    }
-
 	if len(news.Dialog) == 0 {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
 			"status":      fiber.ErrBadRequest.Message,
@@ -273,7 +235,7 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	updatedNews, err := c.newsusecase.UpdateNewsByID(id, news, fileHeaders, deleteImages, ctx)
+	updatedNews, err := c.newsusecase.UpdateNewsByID(id, news, imageTitleFile, imageDescFile, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,
@@ -286,7 +248,7 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
-		"message":     	"Nursing house retrieved successfully",
+		"message":     	"News retrieved successfully",
 		"result":      	updatedNews,
 	})
 }

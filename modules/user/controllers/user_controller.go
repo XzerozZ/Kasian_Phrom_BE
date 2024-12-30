@@ -184,7 +184,7 @@ func (c *UserController) UpdateUserByIDHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
-		"message":     	"Nursing house retrieved successfully",
+		"message":     	"User retrieved successfully",
 		"result":      	updatedUser,
 	})
 }
