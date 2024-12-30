@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"strings"
+	"strconv"
 	"mime/multipart"
   	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
@@ -34,11 +35,12 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
 
 	types := form.Value["type"]
 	descs := form.Value["desc"]
-	if len(types) != len(descs) {
-		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+	bolds := form.Value["bold"]
+	if len(types) != len(descs) || len(types) != len(bolds) {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":      fiber.ErrBadRequest.Message,
 			"status_code": fiber.ErrBadRequest.Code,
-			"message":     "type and desc counts do not match",
+			"message":     "Mismatch in count of 'type', 'desc', and 'bold'",
 			"result":      nil,
 		})
 	}
@@ -59,9 +61,20 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
     }
 
 	for i := 0; i < len(types); i++ {
+		bold, err := strconv.ParseBool(bolds[i])
+		if err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":      fiber.ErrBadRequest.Message,
+				"status_code": fiber.ErrBadRequest.Code,
+				"message":     "Invalid value for 'bold', must be true or false",
+				"result":      nil,
+			})
+		}
+
 		req.Dialog = append(req.Dialog, entities.Dialog{
 			Type: types[i],
 			Desc: descs[i],
+			Bold: bold,
 		})
 	}
 
@@ -183,11 +196,12 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 	
 	types := form.Value["type"]
 	descs := form.Value["desc"]
-	if len(types) != len(descs) {
-		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+	bolds := form.Value["bold"]
+	if len(types) != len(descs) || len(types) != len(bolds) {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":      fiber.ErrBadRequest.Message,
 			"status_code": fiber.ErrBadRequest.Code,
-			"message":     "type and desc counts do not match",
+			"message":     "Mismatch in count of 'type', 'desc', and 'bold'",
 			"result":      nil,
 		})
 	}
@@ -207,9 +221,20 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
     }
 
 	for i := 0; i < len(types); i++ {
+		bold, err := strconv.ParseBool(bolds[i])
+		if err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":      fiber.ErrBadRequest.Message,
+				"status_code": fiber.ErrBadRequest.Code,
+				"message":     "Invalid value for 'bold', must be true or false",
+				"result":      nil,
+			})
+		}
+
 		news.Dialog = append(news.Dialog, entities.Dialog{
 			Type: types[i],
 			Desc: descs[i],
+			Bold: bold,
 		})
 	}
 

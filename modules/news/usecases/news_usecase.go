@@ -44,6 +44,7 @@ func (u *NewsUseCaseImpl) CreateNews(news *entities.News, files []multipart.File
 			ID:		uuid.New().String(),
 			Type:   dialogReq.Type,
 			Desc:   dialogReq.Desc,
+			Bold:	dialogReq.Bold,
 			NewsID: id,
 		}
 	}
@@ -151,6 +152,7 @@ func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, files []
 			ID:		uuid.New().String(),
 			Type:   dialogReq.Type,
 			Desc:   dialogReq.Desc,
+			Bold:	dialogReq.Bold,
 			NewsID: existingNews.ID,
 		}
 	}
