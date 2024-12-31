@@ -17,7 +17,7 @@ type NewsUseCase interface {
 	GetAllNews() ([]entities.News, error)
 	GetNewsByID(id string) (*entities.News, error)
 	GetNewsNextID() (string, error)
-	UpdateNewsByID(id string, news entities.News, imageTitleFile *multipart.FileHeader, imageDescFile *multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error)
+	UpdateNewsByID(id string, news entities.News, imageTitleFile *multipart.FileHeader, imageDescFile *multipart.FileHeader, shouldDeleteImageDesc bool, ctx *fiber.Ctx) (*entities.News, error)
 	DeleteNewsByID(id string) error
 }
 
@@ -108,7 +108,7 @@ func (u *NewsUseCaseImpl) GetNewsNextID() (string, error) {
 	return u.newsrepo.GetNewsNextID()
 }
 
-func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, imageTitleFile *multipart.FileHeader, imageDescFile *multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error) {
+func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, imageTitleFile *multipart.FileHeader, imageDescFile *multipart.FileHeader, shouldDeleteImageDesc bool, ctx *fiber.Ctx) (*entities.News, error) {
 	existingNews, err := u.newsrepo.GetNewsByID(id)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,9 @@ func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, imageTit
 		existingNews.Image_Title = imageUrl
 	}
 
-	if imageDescFile != nil {
+	if shouldDeleteImageDesc {
+		existingNews.Image_Desc = "" 
+	} else if imageDescFile != nil {
 		fileName := uuid.New().String() + "_desc.jpg"
 		if err := ctx.SaveFile(imageDescFile, "./uploads/"+fileName); err != nil {
 			return nil, err
@@ -152,6 +154,7 @@ func (u *NewsUseCaseImpl) UpdateNewsByID(id string, news entities.News, imageTit
 
 		existingNews.Image_Desc = imageUrl
 	}
+
 	for _, dialog := range existingNews.Dialog {
 		if err := u.newsrepo.DeleteDialog(dialog.ID); err != nil {
 			return nil, err

@@ -182,7 +182,8 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 	title := form.Value["title"]
 	imageTitleFile, _ := ctx.FormFile("image_title")
 	imageDescFile, _ := ctx.FormFile("image_desc")
-
+	imageDescValue := form.Value["image_desc"]
+	shouldDeleteImageDesc := len(imageDescValue) > 0 && imageDescValue[0] == "del_img"
 	if len(title) == 0 {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
 			"status":      fiber.ErrBadRequest.Message,
@@ -235,7 +236,7 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	updatedNews, err := c.newsusecase.UpdateNewsByID(id, news, imageTitleFile, imageDescFile, ctx)
+	updatedNews, err := c.newsusecase.UpdateNewsByID(id, news, imageTitleFile, imageDescFile, shouldDeleteImageDesc, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,
