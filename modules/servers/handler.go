@@ -14,6 +14,9 @@ import (
 	newsControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/controllers"
 	newsRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/repositories"
 	newsUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
+	CrpControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/Calculate_retirement_plan/controllers"
+	CrpRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/Calculate_retirement_plan/repositories"
+	CrpUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/Calculate_retirement_plan/usecases"
 
 	"gorm.io/gorm"
 	"github.com/gofiber/fiber/v2"
@@ -35,6 +38,8 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase) {
 	setupNursingHouseRoutes(app, db, supa)
 	SetupNewsRoutes(app, db, supa)
 	setupUserRoutes(app, db, jwt, supa)
+	setupCrpRoutes(app, db)
+
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
 			"status":  "Success",
@@ -85,4 +90,40 @@ func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase)
 	nhGroup.Get("/id" , nhController.GetNhNextIDHandler)
 	nhGroup.Get("/:id", nhController.GetNhByIDHandler)
 	nhGroup.Put("/:id", nhController.UpdateNhByIDHandler)
+}
+
+func setupCrpRoutes(app *fiber.App, db *gorm.DB) {
+	finRepository := CrpRepositories.NewGormFinRepository(db)
+	finUseCase := CrpUseCases.NewFinUseCase(finRepository)
+	finController := CrpControllers.NewFinController(finUseCase)
+
+	finGroup := app.Group("/financial")
+	finGroup.Post("/", finController.CreateFinHandler)
+    finGroup.Get("/:id", finController.GetFinByIDHandler)
+	///////
+
+	assRepository := CrpRepositories.NewGormAssRepository(db)
+	assUseCase := CrpUseCases.NewAssUseCase(assRepository)
+	assController := CrpControllers.NewAssController(assUseCase)
+
+	assGroup := app.Group("/asset")
+	assGroup.Post("/", assController.CreateAssHandler)
+    assGroup.Get("/:id", assController.GetAssByIDHandler)
+    assGroup.Get("/user/:username", assController.GetAssByUsernameHandler)
+    assGroup.Put("/:id", assController.UpdateAssByIDHandler)
+    assGroup.Delete("/:id", assController.DeleteAssByIDHandler)
+
+
+	///////
+
+	//เพิ่ม user ด้วย
+	userRepository := userRepositories.NewGormUserRepository(db)
+
+	retRepository := CrpRepositories.NewGormRetRepository(db)
+	retUseCase := CrpUseCases.NewRetUseCase(retRepository, finRepository, assRepository, userRepository)
+	retController := CrpControllers.NewRetController(retUseCase)
+
+	retireGroup := app.Group("retire")
+	retireGroup.Post("/", retController.CreateRetHandler)
+	
 }
