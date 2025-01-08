@@ -35,6 +35,7 @@ func InitDB(config configs.PostgreSQL) {
 		&entities.Image{},
 		&entities.News{},
 		&entities.Dialog{},
+		&entities.Favorite{},
     )
 	insertRoles()
 	log.Println("Database connection established successfully!")

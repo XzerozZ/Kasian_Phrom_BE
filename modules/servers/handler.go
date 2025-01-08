@@ -14,6 +14,9 @@ import (
 	newsControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/controllers"
 	newsRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/repositories"
 	newsUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
+	favControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/controllers"
+	favRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/repositories"
+	favUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/usecases"
 
 	"gorm.io/gorm"
 	"github.com/gofiber/fiber/v2"
@@ -34,6 +37,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase) {
 
 	setupNursingHouseRoutes(app, db, supa)
 	SetupNewsRoutes(app, db, supa)
+	setupFavoriteRoutes(app, db)
 	setupUserRoutes(app, db, jwt, supa)
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
@@ -85,4 +89,16 @@ func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase)
 	nhGroup.Get("/id" , nhController.GetNhNextIDHandler)
 	nhGroup.Get("/:id", nhController.GetNhByIDHandler)
 	nhGroup.Put("/:id", nhController.UpdateNhByIDHandler)
+}
+
+func setupFavoriteRoutes(app *fiber.App, db *gorm.DB) {
+	favRepository := favRepositories.NewGormFavRepository(db)
+	favUseCase := favUseCases.NewFavUseCase(favRepository)
+	favController := favControllers.NewFavController(favUseCase)
+
+	favGroup := app.Group("/favorite")
+	favGroup.Post("/", favController.CreateFavHandler)
+	favGroup.Get("/:user_id", favController.GetFavByUserIDHandler)
+	favGroup.Get("/:user_id/:nh_id", favController.CheckFavHandler)
+	favGroup.Delete("/:user_id/:nh_id", favController.DeleteFavByIDHandler)
 }

@@ -69,7 +69,7 @@ func TestNewsHandlers(t *testing.T) {
 	app := fiber.New()
 	app.Post("/news", controller.CreateNewsHandler)
 	app.Get("/news", controller.GetAllNewsHandler)
-	app.Get("/news/next-id", controller.GetNewsNextIDHandler)  // Moved before :id route
+	app.Get("/news/next-id", controller.GetNewsNextIDHandler)
 	app.Get("/news/:id", controller.GetNewsByIDHandler)
 	app.Put("/news/:id", controller.UpdateNewsByIDHandler)
 	app.Delete("/news/:id", controller.DeleteNewsByIDHandler)
