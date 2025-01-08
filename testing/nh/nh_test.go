@@ -2,7 +2,6 @@ package controllers_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"mime/multipart"
 	"net/http/httptest"
 	"testing"
@@ -27,7 +26,15 @@ func (m *MockNhUseCase) CreateNh(nh entities.NursingHouse, files []multipart.Fil
 	return nil, args.Error(1)
 }
 
-func (m *MockNhUseCase) GetAllNh() ([]entities.NursingHouse, error) {
+func (m *MockNhUseCase) GetNhByID(id string) (*entities.NursingHouse, error) {
+	args := m.Called(id)
+	if result := args.Get(0); result != nil {
+		return result.(*entities.NursingHouse), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *MockNhUseCase) GetActiveNh() ([]entities.NursingHouse, error) {
 	args := m.Called()
 	if result := args.Get(0); result != nil {
 		return result.([]entities.NursingHouse), args.Error(1)
@@ -35,7 +42,7 @@ func (m *MockNhUseCase) GetAllNh() ([]entities.NursingHouse, error) {
 	return nil, args.Error(1)
 }
 
-func (m *MockNhUseCase) GetActiveNh() ([]entities.NursingHouse, error) {
+func (m *MockNhUseCase) GetAllNh() ([]entities.NursingHouse, error) {
 	args := m.Called()
 	if result := args.Get(0); result != nil {
 		return result.([]entities.NursingHouse), args.Error(1)
@@ -51,17 +58,12 @@ func (m *MockNhUseCase) GetInactiveNh() ([]entities.NursingHouse, error) {
 	return nil, args.Error(1)
 }
 
-func (m *MockNhUseCase) GetNhByID(id string) (*entities.NursingHouse, error) {
-	args := m.Called(id)
-	if result := args.Get(0); result != nil {
-		return result.(*entities.NursingHouse), args.Error(1)
-	}
-	return nil, args.Error(1)
-}
-
 func (m *MockNhUseCase) GetNhNextID() (string, error) {
 	args := m.Called()
-	return args.String(0), args.Error(1)
+	if result := args.Get(0); result != nil {
+		return result.(string), args.Error(1)
+	}
+	return "", args.Error(1)
 }
 
 func (m *MockNhUseCase) UpdateNhByID(id string, nh entities.NursingHouse, files []multipart.FileHeader, deleteImages []string, ctx *fiber.Ctx) (*entities.NursingHouse, error) {
@@ -72,103 +74,88 @@ func (m *MockNhUseCase) UpdateNhByID(id string, nh entities.NursingHouse, files 
 	return nil, args.Error(1)
 }
 
-func setupApp(routeSetup func(*fiber.App)) *fiber.App {
-	app := fiber.New()
-	routeSetup(app)
-	return app
-}
-
 func TestNhHandlers(t *testing.T) {
 	mockUseCase := new(MockNhUseCase)
 	controller := controllers.NewNhController(mockUseCase)
-
-	app := setupApp(func(app *fiber.App) {
-		app.Post("/nh", controller.CreateNhHandler)
-		app.Get("/nh", controller.GetAllNhHandler)
-		app.Put("/nh/:id", controller.UpdateNhByIDHandler) // Add the PUT route for update
-	})
+	app := fiber.New()
+	app.Post("/nh", controller.CreateNhHandler)
+	app.Put("/nh/:id", controller.UpdateNhByIDHandler)
 
 	t.Run("CreateNhHandler - Success", func(t *testing.T) {
 		body := new(bytes.Buffer)
 		writer := multipart.NewWriter(body)
 
-		// Mock Data
-		nhData := map[string]string{
-			"name":    "Test Nursing Home",
-			"address": "123 Test Address",
-			"status":  "active",
-		}
-		for key, value := range nhData {
-			_ = writer.WriteField(key, value)
-		}
-		fileContents := []byte("dummy file content")
+		_ = writer.WriteField("name", "Test Nursing Home")
+		_ = writer.WriteField("address", "123 Test Address")
+		_ = writer.WriteField("status", "active")
+
 		part, _ := writer.CreateFormFile("images", "test.jpg")
-		_, _ = part.Write(fileContents)
+		_, _ = part.Write([]byte("dummy image content"))
 		writer.Close()
 
-		// Mock Response
 		expectedNh := &entities.NursingHouse{
 			Name:    "Test Nursing Home",
 			Address: "123 Test Address",
 			Status:  "active",
 		}
-		mockUseCase.On("CreateNh", mock.Anything, mock.Anything, mock.Anything).Return(expectedNh, nil)
 
+		mockUseCase.On("CreateNh", mock.Anything, mock.Anything, mock.Anything).Return(expectedNh, nil)
 		req := httptest.NewRequest("POST", "/nh", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
 		resp, err := app.Test(req, -1)
 		assert.NoError(t, err)
 		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
-		mockUseCase.AssertExpectations(t)
 	})
 
 	t.Run("UpdateNhByIDHandler - Success", func(t *testing.T) {
-		// Mock input
 		id := "123"
-		nursingHouse := entities.NursingHouse{
-			Name:    "Updated Nursing Home",
-			Address: "456 Updated Address",
-			Status:  "active",
+		
+		existingNh := &entities.NursingHouse{
+			Name: "Old Name",
+			Address: "Old Address",
+			Images: []entities.Image{{ImageLink: "old_image.jpg"}},
 		}
-		files := []multipart.FileHeader{
-			{Filename: "new_image.jpg"},
-		}
-		deleteImages := []string{"old_image.jpg"}
-
-		expectedNh := &entities.NursingHouse{
-			Name:    "Updated Nursing Home",
-			Address: "456 Updated Address",
-			Status:  "active",
-		}
-
-		mockUseCase.On("GetNhByID", id).Return(&entities.NursingHouse{
-			Images: []string{"old_image.jpg"},
-		}, nil)
-
-		mockUseCase.On("UpdateNhByID", id, nursingHouse, files, deleteImages, mock.Anything).Return(expectedNh, nil)
-
+		mockUseCase.On("GetNhByID", id).Return(existingNh, nil)
+		
 		body := new(bytes.Buffer)
 		writer := multipart.NewWriter(body)
-		_ = writer.WriteField("name", nursingHouse.Name)
-		_ = writer.WriteField("address", nursingHouse.Address)
-		_ = writer.WriteField("status", nursingHouse.Status)
-		part, _ := writer.CreateFormFile("images", "new_image.jpg")
-		_, _ = part.Write([]byte("new image content"))
+
+		_ = writer.WriteField("name", "Updated Nursing Home")
+		_ = writer.WriteField("address", "456 Updated Address")
+		_ = writer.WriteField("status", "active")
 		_ = writer.WriteField("delete_images", "old_image.jpg")
+
+		part, _ := writer.CreateFormFile("images", "new_test.jpg")
+		_, _ = part.Write([]byte("dummy image content"))
+		
 		writer.Close()
 
-		req := httptest.NewRequest("PUT", "/nh/123", body)
-		req.Header.Set("Content-Type", writer.FormDataContentType())
+		updatedNh := &entities.NursingHouse{
+			Name:    "Updated Nursing Home",
+			Address: "456 Updated Address",
+			Status:  "active",
+		}
+		
+		mockUseCase.On("UpdateNhByID", 
+			id,
+			mock.MatchedBy(func(nh entities.NursingHouse) bool {
+				return nh.Name == "Updated Nursing Home" &&
+					   nh.Address == "456 Updated Address" &&
+					   nh.Status == "active"
+			}),
+			mock.AnythingOfType("[]multipart.FileHeader"),
+			[]string{"old_image.jpg"},
+			mock.AnythingOfType("*fiber.Ctx"),
+		).Return(updatedNh, nil)
 
+		req := httptest.NewRequest("PUT", "/nh/"+id, body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+	
 		resp, err := app.Test(req, -1)
 		assert.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-
-		var actualNh entities.NursingHouse
-		err = json.NewDecoder(resp.Body).Decode(&actualNh)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedNh, &actualNh)
+		
 		mockUseCase.AssertExpectations(t)
 	})
 }

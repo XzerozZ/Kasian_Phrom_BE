@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/controllers"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 )
@@ -63,19 +62,17 @@ func TestRegisterHandler(t *testing.T) {
 			"password": "password123",
 			"role": "User",
 		}
-		jsonBody, _ := json.Marshal(reqBody)
 
+		jsonBody, _ := json.Marshal(reqBody)
 		expectedUser := &entities.User{
 			Username: "testuser",
 			Email: "test@test.com",
 		}
 
 		mockUseCase.On("Register", mock.AnythingOfType("*entities.User"), "User").Return(expectedUser, nil)
-
 		req := httptest.NewRequest("POST", "/register", bytes.NewBuffer(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		resp, _ := app.Test(req)
-
 		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
 		mockUseCase.AssertExpectations(t)
 	})
@@ -85,7 +82,6 @@ func TestLoginHandler(t *testing.T) {
 	mockUseCase := new(MockUserUseCase)
 	controller := controllers.NewUserController(mockUseCase)
 	app := setupApp(controller)
-
 	t.Run("successful login", func(t *testing.T) {
 		reqBody := map[string]string{
 			"email": "test@test.com",
@@ -114,7 +110,6 @@ func TestLoginAdminHandler(t *testing.T) {
 	mockUseCase := new(MockUserUseCase)
 	controller := controllers.NewUserController(mockUseCase)
 	app := setupApp(controller)
-
 	t.Run("successful admin login", func(t *testing.T) {
 		reqBody := map[string]string{
 			"email": "admin@test.com",
@@ -143,7 +138,6 @@ func TestUpdateUserHandler(t *testing.T) {
 	mockUseCase := new(MockUserUseCase)
 	controller := controllers.NewUserController(mockUseCase)
 	app := setupApp(controller)
-
 	t.Run("successful user update", func(t *testing.T) {
 		body := new(bytes.Buffer)
 		writer := multipart.NewWriter(body)
