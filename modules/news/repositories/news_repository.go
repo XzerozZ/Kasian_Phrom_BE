@@ -48,6 +48,7 @@ func (r *GormNewsRepository) GetNewsByID(id string) (*entities.News, error) {
 	if err := r.db.Preload("Dialog").First(&news, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
+	
 	return &news , nil
 }
 

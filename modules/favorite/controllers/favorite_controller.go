@@ -93,6 +93,7 @@ func (c *FavController) CheckFavHandler(ctx *fiber.Ctx) error {
 				"result":      nil,
 			})
 		}
+
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":      "Internal Server Error",
 			"status_code": fiber.StatusInternalServerError,
@@ -111,7 +112,6 @@ func (c *FavController) CheckFavHandler(ctx *fiber.Ctx) error {
 func (c *FavController) DeleteFavByIDHandler(ctx *fiber.Ctx) error {
 	userID := ctx.Params("user_id")
 	nursingHouseID := ctx.Params("nh_id")
-
 	err := c.favusecase.DeleteFavByID(userID, nursingHouseID)
 	if err != nil {
 		if err.Error() == "record not found" {
@@ -122,6 +122,7 @@ func (c *FavController) DeleteFavByIDHandler(ctx *fiber.Ctx) error {
 				"result":      nil,
 			})
 		}
+		
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":      "Internal Server Error",
 			"status_code": fiber.StatusInternalServerError,

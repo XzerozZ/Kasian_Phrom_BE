@@ -47,6 +47,7 @@ func (r *GormFavRepository) GetFavByUserID(userID string) (*entities.User, error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("user not found: %v", err)
 		}
+
 		return nil, err
 	}
 
@@ -59,6 +60,7 @@ func (r *GormFavRepository) CheckFav(userID string, nursingHouseID string) error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf("not favorited nursing house")
 		}
+		
 		return err
 	}
 
