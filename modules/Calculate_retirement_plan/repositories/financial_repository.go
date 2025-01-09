@@ -40,7 +40,7 @@ func (r *GormFinRepository) CreateFin(financial *entities.Financial) (*entities.
 
 func (r *GormFinRepository) GetFinByID(financial_id string) (*entities.Financial, error) {
 	var financial entities.Financial
-	if err := r.db.First(&financial, "financial_id = ?", financial_id).Error; err != nil {
+	if err := r.db.First(&financial, "id = ?", financial_id).Error; err != nil {
 		return nil, err
 	}
 
