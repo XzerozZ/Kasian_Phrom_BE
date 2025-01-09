@@ -17,6 +17,9 @@ import (
 	favControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/controllers"
 	favRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/repositories"
 	favUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/usecases"
+	assetControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/controllers"
+	assetRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/repositories"
+	assetUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/usecases"
 
 	"gorm.io/gorm"
 	"github.com/gofiber/fiber/v2"
@@ -38,6 +41,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase) {
 	setupNursingHouseRoutes(app, db, supa)
 	SetupNewsRoutes(app, db, supa)
 	setupFavoriteRoutes(app, db)
+	setupAssetRoutes(app, db)
 	setupUserRoutes(app, db, jwt, supa)
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
@@ -101,4 +105,17 @@ func setupFavoriteRoutes(app *fiber.App, db *gorm.DB) {
 	favGroup.Get("/:user_id", favController.GetFavByUserIDHandler)
 	favGroup.Get("/:user_id/:nh_id", favController.CheckFavHandler)
 	favGroup.Delete("/:user_id/:nh_id", favController.DeleteFavByIDHandler)
+}
+
+func setupAssetRoutes(app *fiber.App, db *gorm.DB) {
+	assetRepository := assetRepositories.NewGormAssetRepository(db)
+	assetUseCase := assetUseCases.NewAssetUseCase(assetRepository)
+	assetController := assetControllers.NewAssetController(assetUseCase)
+
+	assetGroup := app.Group("/asset")
+	assetGroup.Post("/", assetController.CreateAssetHandler)
+	assetGroup.Get("/:id", assetController.GetAssetByIDHandler)
+	assetGroup.Get("/:user_id", assetController.GetAssetByUserIDHandler)
+	assetGroup.Put("/:id", assetController.UpdateAssetByIDHandler)
+	assetGroup.Delete("/:id", assetController.DeleteAssetByIDHandler)
 }

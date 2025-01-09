@@ -1,24 +1,22 @@
 package controllers
 
 import (
-	"github.com/XzerozZ/Kasian_Phrom_BE/modules/Calculate_retirement_plan/usecases"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/usecases"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-type AssController struct {
-	assusecase usecases.AssUseCase
+type AssetController struct {
+	assetusecase usecases.AssetUseCase
 }
 
-func NewAssController(assusecase usecases.AssUseCase) *AssController {
-	return &AssController{assusecase: assusecase}
+func NewAssetController(assetusecase usecases.AssetUseCase) *AssetController {
+	return &AssetController{assetusecase: assetusecase}
 }
 
-func (c *AssController) CreateAssHandler(ctx *fiber.Ctx) error {
-
+func (c *AssetController) CreateAssetHandler(ctx *fiber.Ctx) error {
 	var asset entities.Asset
-
 	if err := ctx.BodyParser(&asset); err != nil {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
 			"status":      fiber.ErrBadRequest.Message,
@@ -27,7 +25,8 @@ func (c *AssController) CreateAssHandler(ctx *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
-	data, err := c.assusecase.CreateAss(asset, ctx)
+
+	createdAsset, err := c.assetusecase.CreateAsset(asset, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
 			"status":      fiber.ErrInternalServerError.Message,
@@ -41,13 +40,13 @@ func (c *AssController) CreateAssHandler(ctx *fiber.Ctx) error {
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "Asset created successfully",
-		"result":      data,
+		"result":      createdAsset,
 	})
 }
 
-func (c *AssController) GetAssByIDHandler(ctx *fiber.Ctx) error {
+func (c *AssetController) GetAssetByIDHandler(ctx *fiber.Ctx) error {
 	id := ctx.Params("id")
-	data, err := c.assusecase.GetAssByID(id)
+	data, err := c.assetusecase.GetAssetByID(id)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      fiber.ErrNotFound.Message,
@@ -56,17 +55,33 @@ func (c *AssController) GetAssByIDHandler(ctx *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
+
+	monthlyExpenses, err := c.assetusecase.CalculateMonthlyExpenses(data, ctx)
+    if err != nil {
+        return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+            "status":      fiber.ErrInternalServerError.Message,
+            "status_code": fiber.ErrInternalServerError.Code,
+            "message":     err.Error(),
+            "result":      nil,
+        })
+    }
+
+	response := fiber.Map{
+        "asset": data,
+        "monthly_expenses": monthlyExpenses,
+    }
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "Asset retrieved successfully",
-		"result":      data,
+		"result":      response,
 	})
 }
 
-func (c *AssController) GetAssNextIDHandler(ctx *fiber.Ctx) error {
-	data, err := c.assusecase.GetAssNextID()
+func (c *AssetController) GetAssetByUserIDHandler(ctx *fiber.Ctx) error {
+	userID := ctx.Params("user_id")
+	assets, err := c.assetusecase.GetAssetByUserID(userID)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      fiber.ErrNotFound.Message,
@@ -76,19 +91,46 @@ func (c *AssController) GetAssNextIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
+	if len(assets) == 0 {
+		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"status":      "Not Found",
+			"status_code": fiber.StatusNotFound,
+			"message":     "No Asset found for this user",
+			"result":      nil,
+		})
+	}
+
+	var assetsWithExpenses []fiber.Map
+    for _, asset := range assets {
+        monthlyExpenses, err := c.assetusecase.CalculateMonthlyExpenses(&asset, ctx)
+        if err != nil {
+            return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+                "status":      fiber.ErrInternalServerError.Message,
+                "status_code": fiber.ErrInternalServerError.Code,
+                "message":     err.Error(),
+                "result":      nil,
+            })
+        }
+
+        assetResponse := fiber.Map{
+            "asset":            asset,
+            "monthly_expenses": monthlyExpenses,
+        }
+
+        assetsWithExpenses = append(assetsWithExpenses, assetResponse)
+    }
+
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
-		"message":     "Asset get next id successfully",
-		"result":      data,
+		"message":     "Asset retrieved successfully",
+		"result":      assetsWithExpenses,
 	})
 }
 
-
-func (c *AssController) UpdateAssByIDHandler(ctx *fiber.Ctx) error {
+func (c *AssetController) UpdateAssetByIDHandler(ctx *fiber.Ctx) error {
 	id := ctx.Params("id")
 	var asset entities.Asset
-
 	if err := ctx.BodyParser(&asset); err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,
@@ -98,7 +140,7 @@ func (c *AssController) UpdateAssByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	updatedAss, err := c.assusecase.UpdateAssByID(id, asset, ctx)
+	updatedAsset, err := c.assetusecase.UpdateAssetByID(id, asset, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,
@@ -112,14 +154,14 @@ func (c *AssController) UpdateAssByIDHandler(ctx *fiber.Ctx) error {
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
 		"message":     	"Asset update successfully",
-		"result":      	updatedAss,
+		"result":      	updatedAsset,
 	})
 }
 
 
-func (c *AssController) DeleteAssByIDHandler(ctx *fiber.Ctx) error {
+func (c *AssetController) DeleteAssetByIDHandler(ctx *fiber.Ctx) error {
     id := ctx.Params("id")
-    err := c.assusecase.DeleteAssByID(id)
+    err := c.assetusecase.DeleteAssetByID(id)
     if err != nil {
         return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "status":      "Error",
@@ -135,24 +177,4 @@ func (c *AssController) DeleteAssByIDHandler(ctx *fiber.Ctx) error {
         "message":     "Asset deleted successfully",
         "result":      nil,
     })
-}
-
-func (c *AssController) GetAssByUsernameHandler(ctx *fiber.Ctx) error {
-	username := ctx.Params("username")
-	data, err := c.assusecase.GetAssByUsername(username)
-	if err != nil {
-		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      fiber.ErrNotFound.Message,
-			"status_code": fiber.ErrNotFound.Code,
-			"message":     err.Error(),
-			"result":      nil,
-		})
-	}
-
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      "Success",
-		"status_code": fiber.StatusOK,
-		"message":     "Asset retrieved successfully",
-		"result":      data,
-	})
 }

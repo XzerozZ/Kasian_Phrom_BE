@@ -76,8 +76,7 @@ func (u *NhUseCaseImpl) CreateNh(nursingHouse entities.NursingHouse, files []mul
         })
     }
 
-	var createdNh *entities.NursingHouse
-	createdNh, err = u.nhrepo.CreateNh(&nursingHouse, images)
+	createdNh, err := u.nhrepo.CreateNh(&nursingHouse, images)
     if err != nil {
         return nil, err
     }

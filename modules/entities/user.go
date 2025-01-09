@@ -13,6 +13,7 @@ type User struct {
 	RoleID			int			`json:"r_id" gorm:"not null"`
 	Role			Role		`json:"role" gorm:"foreignKey:RoleID`
 	Favorites   	[]Favorite 	`json:"favorites" gorm:"foreignKey:UserID"`
+	Assets			[]Asset		`json:"assets" gorm:"foreignKey:UserID"`
 	CreatedAt 		time.Time 	`json:"created_at"`
 	UpdatedAt 		time.Time 	`json:"updated_at"`
 }
