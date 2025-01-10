@@ -133,6 +133,58 @@ func (c *UserController) LoginAdminHandler(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *UserController) ResetPasswordHandler(ctx *fiber.Ctx) error {
+	var req struct {
+		OldPassword string `json:"old_password"`
+		NewPassword string `json:"new_password"`
+	}
+
+	if err := ctx.BodyParser(&req); err != nil {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Invalid request body",
+			"result":      nil,
+		})
+	}
+
+	if req.OldPassword == "" || req.NewPassword == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Old password or new password is missing",
+			"result":      nil,
+		})
+	}
+	
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
+	err := c.userusecase.ResetPassword(userID, req.OldPassword, req.NewPassword)
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Password reset successfully",
+	})
+}
+
 func (c *UserController) LogoutHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
@@ -143,7 +195,16 @@ func (c *UserController) LogoutHandler(ctx *fiber.Ctx) error {
 }
 
 func (c *UserController) UpdateUserByIDHandler(ctx *fiber.Ctx) error {
-	id := ctx.Params("id")
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
 	var user entities.User
 	if err := ctx.BodyParser(&user); err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
@@ -171,7 +232,7 @@ func (c *UserController) UpdateUserByIDHandler(ctx *fiber.Ctx) error {
 		file = files[0]
 	}
 
-	updatedUser, err := c.userusecase.UpdateUserByID(id, user, file, ctx)
+	updatedUser, err := c.userusecase.UpdateUserByID(userID, user, file, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,

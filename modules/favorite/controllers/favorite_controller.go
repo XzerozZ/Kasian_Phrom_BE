@@ -16,12 +16,32 @@ func NewFavController(favusecase usecases.FavUseCase) *FavController {
 }
 
 func (c *FavController) CreateFavHandler(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
 	var fav entities.Favorite
 	if err := ctx.BodyParser(&fav); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":      "Bad Request",
 			"status_code": fiber.StatusBadRequest,
 			"message":     "Invalid input data",
+			"result":      nil,
+		})
+	}
+
+	fav.UserID = userID
+	if fav.NursingHouseID == ""{
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "UserID or NursingHouseID is missing",
 			"result":      nil,
 		})
 	}
@@ -43,8 +63,17 @@ func (c *FavController) CreateFavHandler(ctx *fiber.Ctx) error {
 }
 
 func (c *FavController) GetFavByUserIDHandler(ctx *fiber.Ctx) error {
-	userID := ctx.Params("user_id")
-	user, err := c.favusecase.GetFavByUserID(userID) 
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
+	favs, err := c.favusecase.GetFavByUserID(userID) 
 	if err != nil {
     	return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
         	"status":      "Internal Server Error",
@@ -54,22 +83,12 @@ func (c *FavController) GetFavByUserIDHandler(ctx *fiber.Ctx) error {
     	})
 	}
 
-	favs := user.Favorites
 	if len(favs) == 0 {
 		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"status":      "Not Found",
 			"status_code": fiber.StatusNotFound,
-			"message":     "No favorites found for the given user",
+			"message":     "No favorites found for this user",
 			"result":      nil,
-		})
-	}
-
-	var result []fiber.Map
-	for _, fav := range favs {
-		result = append(result, fiber.Map{
-			"user_id":       fav.UserID,
-			"nh_id":         fav.NursingHouseID,
-			"NursingHouse":  fav.NursingHouse,
 		})
 	}
 
@@ -77,12 +96,21 @@ func (c *FavController) GetFavByUserIDHandler(ctx *fiber.Ctx) error {
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "Favorites retrieved successfully",
-		"result":      result,
+		"result":      favs,
 	})
 }
 
 func (c *FavController) CheckFavHandler(ctx *fiber.Ctx) error {
-	userID := ctx.Params("user_id")
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
 	nursingHouseID := ctx.Params("nh_id")
 	if err := c.favusecase.CheckFav(userID, nursingHouseID); err != nil {
 		if err.Error() == "not favorited nursing house" {
@@ -110,7 +138,16 @@ func (c *FavController) CheckFavHandler(ctx *fiber.Ctx) error {
 }
 
 func (c *FavController) DeleteFavByIDHandler(ctx *fiber.Ctx) error {
-	userID := ctx.Params("user_id")
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
 	nursingHouseID := ctx.Params("nh_id")
 	err := c.favusecase.DeleteFavByID(userID, nursingHouseID)
 	if err != nil {

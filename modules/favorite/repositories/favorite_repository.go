@@ -18,7 +18,7 @@ func NewGormFavRepository(db *gorm.DB) *GormFavRepository {
 
 type FavRepository interface {
 	CreateFav(fav *entities.Favorite) error
-	GetFavByUserID(userID string) (*entities.User, error)
+	GetFavByUserID(userID string) ([]entities.Favorite, error)
 	CheckFav(userID string, nursingHouseID string) error
 	DeleteFavByID(userID string, nursingHouseID string) error
 }
@@ -41,17 +41,13 @@ func (r *GormFavRepository) CreateFav(fav *entities.Favorite) error {
 	return nil
 }
 
-func (r *GormFavRepository) GetFavByUserID(userID string) (*entities.User, error) {
-	var user entities.User
-	if err := r.db.Preload("Favorites.NursingHouse").Where("id = ?", userID).First(&user).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("user not found: %v", err)
-		}
-
+func (r *GormFavRepository) GetFavByUserID(userID string) ([]entities.Favorite, error) {
+	var favs []entities.Favorite
+	if err := r.db.Preload("NursingHouse").Where("user_id = ?", userID).First(&favs).Error; err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return favs, nil
 }
 
 func (r *GormFavRepository) CheckFav(userID string, nursingHouseID string) error {

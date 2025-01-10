@@ -43,7 +43,6 @@ func (r *GormAssetRepository) GetAssetByID(id string) (*entities.Asset, error) {
 	return &asset, nil
 }
 
-
 func (r *GormAssetRepository) GetAssetByUserID(userID string) ([]entities.Asset, error) {
     var assets []entities.Asset
     if err := r.db.Where("user_id = ?", userID).Find(&assets).Error; err != nil {

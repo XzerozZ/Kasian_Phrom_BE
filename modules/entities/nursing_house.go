@@ -13,7 +13,8 @@ type NursingHouse struct {
 	Web_site		string		`json:"site"`
 	Time			string		`json:"Date" gorm:"not null"`
 	Status    		string    	`jsoon:"status" gorm:"type:varchar(50);default:'Active'"`
-	Images 			[]Image 	`json:"images" gorm:"many2many:nh_images;" `
+	Images 			[]Image 	`json:"images" gorm:"many2many:nh_images;"`
+	Users			[]User		`json:"-" gorm:"foreignKey:HouseID"`
 	CreatedAt   	time.Time
 	UpdatedAt   	time.Time
 }

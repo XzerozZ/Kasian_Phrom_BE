@@ -7,7 +7,7 @@ import (
 
 type FavUseCase interface {
 	CreateFav(fav *entities.Favorite) error
-	GetFavByUserID(userID string) (*entities.User, error)
+	GetFavByUserID(userID string) ([]entities.Favorite, error)
 	CheckFav(userID string, nursingHouseID string) error
 	DeleteFavByID(userID string, nursingHouseID string) error
 }
@@ -24,7 +24,7 @@ func (u *FavUseCaseImpl) CreateFav(fav *entities.Favorite) error {
 	return u.favrepo.CreateFav(fav)
 }
 
-func (u *FavUseCaseImpl) GetFavByUserID(userID string) (*entities.User, error) {
+func (u *FavUseCaseImpl) GetFavByUserID(userID string) ([]entities.Favorite, error) {
 	return u.favrepo.GetFavByUserID(userID)
 }
 

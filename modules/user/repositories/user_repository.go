@@ -67,3 +67,4 @@ func (r *GormUserRepository) UpdateUserByID(user *entities.User) (*entities.User
 
 	return r.GetUserByID(user.ID)
 }
+

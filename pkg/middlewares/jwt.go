@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"strings"
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -11,7 +10,7 @@ import (
 func JWTMiddleware(config configs.JWT) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		tokenString := ctx.Get("Authorization")
-		if tokenString == "" {
+		if tokenString == "" || len(tokenString) < 8 {
 			return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"status":      "Unauthorized",
 				"status_code": fiber.StatusUnauthorized,
@@ -20,16 +19,7 @@ func JWTMiddleware(config configs.JWT) fiber.Handler {
 			})
 		}
 
-		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
-		if tokenString == "" {
-			return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"status":      "Unauthorized",
-				"status_code": fiber.StatusUnauthorized,
-				"message":     "Missing or invalid token format",
-				"result":      nil,
-			})
-		}
-
+		tokenString = tokenString[7:]
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fiber.ErrUnauthorized

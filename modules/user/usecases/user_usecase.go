@@ -1,25 +1,25 @@
 package usecases
 
 import (
-	"errors"
-	"time"
-	"mime/multipart"
 	"os"
+	"errors"
+	"mime/multipart"
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type UserUseCase interface {
 	Register(user *entities.User, roleName string) (*entities.User, error)
 	Login(email, password string) (string, *entities.User, error)
 	LoginAdmin(email, password string) (string, *entities.User, error)
+	ResetPassword(userID, oldPassword, newPassword string) error
 	UpdateUserByID(id string, user entities.User, files *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
 }
 
@@ -58,11 +58,11 @@ func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entit
 func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.User, error) {
 	user, err := u.userrepo.FindUserByEmail(email)
 	if err != nil {
-		return "", nil, errors.New("invalid email or password")
+		return "", nil, errors.New("invalid email")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", nil, errors.New("invalid email or password")
+		return "", nil, errors.New("invalid password")
 	}
 
 	if user.Role.RoleName != "Admin" {
@@ -72,7 +72,6 @@ func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"role":    user.Role.RoleName,
-		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(u.jwtSecret))
@@ -87,17 +86,16 @@ func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.
 func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User, error) {
 	user, err := u.userrepo.FindUserByEmail(email)
 	if err != nil {
-		return "", nil, errors.New("invalid email or password")
+		return "", nil, errors.New("invalid email")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", nil, errors.New("invalid email or password")
+		return "", nil, errors.New("invalid password")
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"role":    user.Role.RoleName,
-		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(u.jwtSecret))
@@ -106,6 +104,34 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 	}
 	
 	return tokenString, &user, nil
+}
+
+func (u *UserUseCaseImpl) ResetPassword(userID, oldPassword, newPassword string) error {
+	user, err := u.userrepo.GetUserByID(userID)
+	if err != nil {
+		return err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
+		return errors.New("invalid old password")
+	}
+
+	if oldPassword == newPassword {
+		return errors.New("new password cannot be the same as the old password")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.Password = string(hashedPassword)
+	_, err = u.userrepo.UpdateUserByID(user)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error) {

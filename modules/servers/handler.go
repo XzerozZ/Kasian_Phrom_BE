@@ -20,6 +20,9 @@ import (
 	assetControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/controllers"
 	assetRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/repositories"
 	assetUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/usecases"
+	retirementControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/controllers"
+	retirementRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
+	retirementUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/usecases"
 
 	"gorm.io/gorm"
 	"github.com/gofiber/fiber/v2"
@@ -40,9 +43,11 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase) {
 
 	setupNursingHouseRoutes(app, db, supa)
 	SetupNewsRoutes(app, db, supa)
-	setupFavoriteRoutes(app, db)
-	setupAssetRoutes(app, db)
+	setupFavoriteRoutes(app, jwt, db)
+	setupAssetRoutes(app, jwt, db)
 	setupUserRoutes(app, db, jwt, supa)
+	setupRetirementRoutes(app, jwt, db)
+
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
 			"status":  "Success",
@@ -74,10 +79,11 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 	authGroup.Post("/register", userController.RegisterHandler)
 	authGroup.Post("/login", userController.LoginHandler)
 	authGroup.Post("/admin/login", userController.LoginAdminHandler)
+	authGroup.Put("/resetpassword", middlewares.JWTMiddleware(jwt), userController.ResetPasswordHandler)
 	authGroup.Post("/logout", middlewares.JWTMiddleware(jwt), userController.LogoutHandler)
 
 	userGroup := app.Group("/user")
-	userGroup.Put("/:id", userController.UpdateUserByIDHandler)
+	userGroup.Put("/", middlewares.JWTMiddleware(jwt), userController.UpdateUserByIDHandler)
 }
 
 func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
@@ -95,27 +101,36 @@ func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase)
 	nhGroup.Put("/:id", nhController.UpdateNhByIDHandler)
 }
 
-func setupFavoriteRoutes(app *fiber.App, db *gorm.DB) {
+func setupFavoriteRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	favRepository := favRepositories.NewGormFavRepository(db)
 	favUseCase := favUseCases.NewFavUseCase(favRepository)
 	favController := favControllers.NewFavController(favUseCase)
 
 	favGroup := app.Group("/favorite")
-	favGroup.Post("/", favController.CreateFavHandler)
-	favGroup.Get("/:user_id", favController.GetFavByUserIDHandler)
-	favGroup.Get("/:user_id/:nh_id", favController.CheckFavHandler)
-	favGroup.Delete("/:user_id/:nh_id", favController.DeleteFavByIDHandler)
+	favGroup.Post("/", middlewares.JWTMiddleware(jwt), favController.CreateFavHandler)
+	favGroup.Get("/", middlewares.JWTMiddleware(jwt), favController.GetFavByUserIDHandler)
+	favGroup.Get("/:nh_id", middlewares.JWTMiddleware(jwt), favController.CheckFavHandler)
+	favGroup.Delete("/:nh_id", middlewares.JWTMiddleware(jwt), favController.DeleteFavByIDHandler)
 }
 
-func setupAssetRoutes(app *fiber.App, db *gorm.DB) {
+func setupAssetRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	assetRepository := assetRepositories.NewGormAssetRepository(db)
 	assetUseCase := assetUseCases.NewAssetUseCase(assetRepository)
 	assetController := assetControllers.NewAssetController(assetUseCase)
 
 	assetGroup := app.Group("/asset")
-	assetGroup.Post("/", assetController.CreateAssetHandler)
+	assetGroup.Post("/", middlewares.JWTMiddleware(jwt), assetController.CreateAssetHandler)
 	assetGroup.Get("/:id", assetController.GetAssetByIDHandler)
-	assetGroup.Get("/:user_id", assetController.GetAssetByUserIDHandler)
-	assetGroup.Put("/:id", assetController.UpdateAssetByIDHandler)
+	assetGroup.Get("/", middlewares.JWTMiddleware(jwt), assetController.GetAssetByUserIDHandler)
+	assetGroup.Put("/:id", middlewares.JWTMiddleware(jwt), assetController.UpdateAssetByIDHandler)
 	assetGroup.Delete("/:id", assetController.DeleteAssetByIDHandler)
+}
+
+func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
+	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
+	retirementUseCase := retirementUseCases.NewRetirementUseCase(retirementRepository)
+	retirementController := retirementControllers.NewRetirementController(retirementUseCase)
+
+	retirementGroup := app.Group("/retirement")
+	retirementGroup.Post("/", middlewares.JWTMiddleware(jwt), retirementController.CreateRetirementHandler)
 }

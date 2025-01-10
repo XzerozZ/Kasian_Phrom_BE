@@ -16,6 +16,16 @@ func NewAssetController(assetusecase usecases.AssetUseCase) *AssetController {
 }
 
 func (c *AssetController) CreateAssetHandler(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+	
 	var asset entities.Asset
 	if err := ctx.BodyParser(&asset); err != nil {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
@@ -26,7 +36,17 @@ func (c *AssetController) CreateAssetHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	createdAsset, err := c.assetusecase.CreateAsset(asset, ctx)
+	if asset.Name == "" || asset.Type == "" || asset.EndYear == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Name, Type or EndYear is missing.",
+			"result":      nil,
+		})
+	}
+
+	asset.UserID = userID
+	createdAsset, err := c.assetusecase.CreateAsset(asset)
 	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
 			"status":      fiber.ErrInternalServerError.Message,
@@ -56,7 +76,7 @@ func (c *AssetController) GetAssetByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	monthlyExpenses, err := c.assetusecase.CalculateMonthlyExpenses(data, ctx)
+	monthlyExpenses, err := c.assetusecase.CalculateMonthlyExpenses(data)
     if err != nil {
         return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
             "status":      fiber.ErrInternalServerError.Message,
@@ -80,7 +100,16 @@ func (c *AssetController) GetAssetByIDHandler(ctx *fiber.Ctx) error {
 }
 
 func (c *AssetController) GetAssetByUserIDHandler(ctx *fiber.Ctx) error {
-	userID := ctx.Params("user_id")
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
 	assets, err := c.assetusecase.GetAssetByUserID(userID)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
@@ -102,7 +131,7 @@ func (c *AssetController) GetAssetByUserIDHandler(ctx *fiber.Ctx) error {
 
 	var assetsWithExpenses []fiber.Map
     for _, asset := range assets {
-        monthlyExpenses, err := c.assetusecase.CalculateMonthlyExpenses(&asset, ctx)
+        monthlyExpenses, err := c.assetusecase.CalculateMonthlyExpenses(&asset)
         if err != nil {
             return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
                 "status":      fiber.ErrInternalServerError.Message,
@@ -130,7 +159,18 @@ func (c *AssetController) GetAssetByUserIDHandler(ctx *fiber.Ctx) error {
 
 func (c *AssetController) UpdateAssetByIDHandler(ctx *fiber.Ctx) error {
 	id := ctx.Params("id")
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
 	var asset entities.Asset
+	asset.UserID = userID
 	if err := ctx.BodyParser(&asset); err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,
@@ -140,7 +180,16 @@ func (c *AssetController) UpdateAssetByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	updatedAsset, err := c.assetusecase.UpdateAssetByID(id, asset, ctx)
+	if asset.Name == "" || asset.Type == "" || asset.EndYear == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Name, Type or EndYear is empty.",
+			"result":      nil,
+		})
+	}
+	
+	updatedAsset, err := c.assetusecase.UpdateAssetByID(id, asset)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,
