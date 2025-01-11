@@ -84,6 +84,7 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 
 	userGroup := app.Group("/user")
 	userGroup.Put("/", middlewares.JWTMiddleware(jwt), userController.UpdateUserByIDHandler)
+	userGroup.Put("/:house_id", middlewares.JWTMiddleware(jwt), userController.AddHouseToUser)
 }
 
 func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {

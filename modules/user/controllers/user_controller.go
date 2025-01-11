@@ -249,3 +249,31 @@ func (c *UserController) UpdateUserByIDHandler(ctx *fiber.Ctx) error {
 		"result":      	updatedUser,
 	})
 }
+
+func (c *UserController) AddHouseToUser(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
+	houseID := ctx.Params("house_id")
+	if err := c.userusecase.AddHouseToUser(userID, houseID);  err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrNotFound.Message,
+			"status_code": 	fiber.ErrNotFound.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      	"Success",
+		"status_code": 	fiber.StatusOK,
+		"message":     	"House added to user successfully",
+	})
+}

@@ -14,7 +14,7 @@ type NursingHouse struct {
 	Time			string		`json:"Date" gorm:"not null"`
 	Status    		string    	`jsoon:"status" gorm:"type:varchar(50);default:'Active'"`
 	Images 			[]Image 	`json:"images" gorm:"many2many:nh_images;"`
-	Users			[]User		`json:"-" gorm:"foreignKey:HouseID"`
+	Users			[]User		`json:"-" gorm:"foreignKey:NursingHouseID"`
 	CreatedAt   	time.Time
 	UpdatedAt   	time.Time
 }

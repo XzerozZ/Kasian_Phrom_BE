@@ -12,10 +12,11 @@ type User struct {
 	ImageLink 		string 			`json:"image_link"`
 	RoleID			int				`json:"-" gorm:"not null"`
 	Role			Role			`json:"role" gorm:"foreignKey:RoleID`
-	Favorites   	[]Favorite 		`json:"favorites" gorm:"foreignKey:UserID"`
-	Assets			[]Asset			`json:"assets" gorm:"foreignKey:UserID"`
-	HouseID			*string			`json:"-"`
-	House			NursingHouse 	`json:"house" gorm:"foreignKey:HouseID"`
+	Favorites   	[]Favorite 		`json:"-" gorm:"foreignKey:UserID"`
+	Assets			[]Asset			`json:"-" gorm:"foreignKey:UserID"`
+	NursingHouseID	*string			`json:"-"`
+	House			NursingHouse 	`json:"house" gorm:"foreignKey:NursingHouseID;references:ID"`
+	RetirementPlan	RetirementPlan	`json:"-" gorm:"foreignKey:UserID"`		
 	CreatedAt 		time.Time 		`json:"created_at"`
 	UpdatedAt 		time.Time 		`json:"updated_at"`
 }

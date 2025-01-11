@@ -21,6 +21,7 @@ type UserUseCase interface {
 	LoginAdmin(email, password string) (string, *entities.User, error)
 	ResetPassword(userID, oldPassword, newPassword string) error
 	UpdateUserByID(id string, user entities.User, files *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
+	AddHouseToUser(userID, nursingHouseID string) error
 }
 
 type UserUseCaseImpl struct {
@@ -169,4 +170,17 @@ func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *mu
     }
 
 	return updatedUser, nil
+}
+
+func (u *UserUseCaseImpl) AddHouseToUser(userID, nursingHouseID string) error {
+	user, err := u.userrepo.GetUserByID(userID)
+	if err != nil {
+		return err
+	}
+
+	if err := u.userrepo.UpdateUserHouseID(user.ID, &nursingHouseID); err != nil {
+        return err
+    }
+
+	return nil
 }

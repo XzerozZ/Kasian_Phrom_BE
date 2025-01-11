@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"fmt"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	
 	"gorm.io/gorm"
@@ -20,6 +21,7 @@ type UserRepository interface {
 	GetUserByID(id string) (*entities.User, error)
 	GetRoleByName(name string) (entities.Role, error)
 	UpdateUserByID(user *entities.User) (*entities.User, error)
+	UpdateUserHouseID(userID string, nursingHouseID *string) error
 }
 
 func (r *GormUserRepository) CreateUser(user *entities.User) (*entities.User, error) {
@@ -68,3 +70,15 @@ func (r *GormUserRepository) UpdateUserByID(user *entities.User) (*entities.User
 	return r.GetUserByID(user.ID)
 }
 
+func (r *GormUserRepository) UpdateUserHouseID(userID string, nursingHouseID *string) error {
+	var nursingHouse entities.NursingHouse
+	if err := r.db.First(&nursingHouse, "id = ?", nursingHouseID).Error; err != nil {
+		return fmt.Errorf("nursing_house_id not found: %v", err)
+	}
+
+	if err := r.db.Model(&entities.User{}).Where("id = ?", userID).Update("nursing_house_id", nursingHouseID).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
