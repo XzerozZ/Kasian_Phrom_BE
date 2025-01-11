@@ -115,12 +115,12 @@ func (u *AssetUseCaseImpl) CalculateMonthlyExpenses(asset *entities.Asset) (floa
         return 0, err
     }
 
-    currentYear := time.Now().Year()
+    currentYear := asset.UpdatedAt.Year()
     if endYear < currentYear {
         return 0, errors.New("end year must be greater than or equal to current year")
     }
 
-    remainingMonths := (endYear - currentYear) * 12 + (12 - int(time.Now().Month()) + 1)
+    remainingMonths := (endYear - currentYear - 1) * 12 + (12 - int(asset.UpdatedAt.Month()) + 1)
     remainingCost := asset.TotalCost - asset.CurrentMoney
     if remainingCost < 0 {
         return 0, errors.New("current money cannot exceed total cost")

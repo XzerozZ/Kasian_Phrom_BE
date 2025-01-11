@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	"fmt"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	
 	"gorm.io/gorm"
@@ -17,19 +16,43 @@ func NewGormUserRepository(db *gorm.DB) *GormUserRepository {
 
 type UserRepository interface {
 	CreateUser(user *entities.User) (*entities.User, error)
+	CreateSelectedHouse(selectedHouse *entities.SelectedHouse) error
 	FindUserByEmail(email string) (entities.User, error)
 	GetUserByID(id string) (*entities.User, error)
+	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
 	GetRoleByName(name string) (entities.Role, error)
 	UpdateUserByID(user *entities.User) (*entities.User, error)
-	UpdateUserHouseID(userID string, nursingHouseID *string) error
+	UpdateSelectedHouse(selectedHouse *entities.SelectedHouse) (*entities.SelectedHouse, error)
 }
 
 func (r *GormUserRepository) CreateUser(user *entities.User) (*entities.User, error) {
-	if err := r.db.Create(&user).Error; err != nil {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&user).Error; err != nil {
+			return err
+		}
+
+		selectedHouse := &entities.SelectedHouse{
+			UserID:         user.ID,
+			NursingHouseID: "00001",
+			CurrentMoney:   0.0,
+		}
+
+		if err := tx.Create(&selectedHouse).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		return nil, err
 	}
 
 	return r.GetUserByID(user.ID)
+}
+
+func (r *GormUserRepository) CreateSelectedHouse(selectedHouse *entities.SelectedHouse) error {
+	return r.db.Create(&selectedHouse).Error
 }
 
 func (r *GormUserRepository) FindUserByEmail(email string) (entities.User, error) {
@@ -44,12 +67,22 @@ func (r *GormUserRepository) FindUserByEmail(email string) (entities.User, error
 
 func (r *GormUserRepository) GetUserByID(id string) (*entities.User, error) {
 	var user entities.User
-	err := r.db.Preload("Role").Where("id = ?", id).First(&user).Error
+	err := r.db.Preload("Role").Preload("Assets").Preload("RetirementPlan").Preload("House.NursingHouse").Where("id = ?", id).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
 
 	return &user, nil
+}
+
+func (r *GormUserRepository) GetSelectedHouse(userID string) (*entities.SelectedHouse, error) {
+	var selectedHouse entities.SelectedHouse
+	err := r.db.Preload("NursingHouse").Where("user_id = ?", userID).First(&selectedHouse).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &selectedHouse, nil
 }
 
 func (r *GormUserRepository) GetRoleByName(name string) (entities.Role, error) {
@@ -70,15 +103,10 @@ func (r *GormUserRepository) UpdateUserByID(user *entities.User) (*entities.User
 	return r.GetUserByID(user.ID)
 }
 
-func (r *GormUserRepository) UpdateUserHouseID(userID string, nursingHouseID *string) error {
-	var nursingHouse entities.NursingHouse
-	if err := r.db.First(&nursingHouse, "id = ?", nursingHouseID).Error; err != nil {
-		return fmt.Errorf("nursing_house_id not found: %v", err)
-	}
+func (r *GormUserRepository) UpdateSelectedHouse(selectedHouse *entities.SelectedHouse) (*entities.SelectedHouse, error) {
+    if err := r.db.Save(&selectedHouse).Error; err != nil {
+        return nil, err
+    }
 
-	if err := r.db.Model(&entities.User{}).Where("id = ?", userID).Update("nursing_house_id", nursingHouseID).Error; err != nil {
-		return err
-	}
-
-	return nil
+    return r.GetSelectedHouse(selectedHouse.UserID)
 }

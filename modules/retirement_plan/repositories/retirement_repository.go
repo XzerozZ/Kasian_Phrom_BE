@@ -20,6 +20,7 @@ type RetirementRepository interface {
 	CreateRetirement(retirement *entities.RetirementPlan) (*entities.RetirementPlan, error)
 	GetRetirementByID(id string) (*entities.RetirementPlan, error)
 	GetRetirementNextID() (string, error)
+	UpdateRetirementPlan(retirement *entities.RetirementPlan) (*entities.RetirementPlan, error)
 }
 
 func (r *GormRetirementRepository) CreateRetirement(retirement *entities.RetirementPlan) (*entities.RetirementPlan, error) {
@@ -53,4 +54,12 @@ func (r *GormRetirementRepository) GetRetirementNextID() (string, error) {
 	nextID := maxIDInt + 1
 	formattedID := fmt.Sprintf("%05d", nextID)
 	return formattedID, nil
+}
+
+func (r *GormRetirementRepository) UpdateRetirementPlan(retirement *entities.RetirementPlan) (*entities.RetirementPlan, error) {
+    if err := r.db.Save(&retirement).Error; err != nil {
+        return nil, err
+    }
+
+    return r.GetRetirementByID(retirement.ID)
 }

@@ -194,6 +194,64 @@ func (c *UserController) LogoutHandler(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *UserController) GetUserByIDHandler(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
+	data, err := c.userusecase.GetUserByID(userID)
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrNotFound.Message,
+			"status_code": 	fiber.ErrNotFound.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      	"Success",
+		"status_code": 	fiber.StatusOK,
+		"message":     	"Nursing house retrieved successfully",
+		"result":      	data,
+	})
+}
+
+func (c *UserController) GetSelectedHouseHandler(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
+	selectedHouse, err := c.userusecase.GetSelectedHouse(userID)
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Selected house retrieved successfully",
+		"result":      selectedHouse,
+	})
+}
+
 func (c *UserController) UpdateUserByIDHandler(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals("user_id").(string)
 	if !ok || userID == "" {
@@ -250,7 +308,7 @@ func (c *UserController) UpdateUserByIDHandler(ctx *fiber.Ctx) error {
 	})
 }
 
-func (c *UserController) AddHouseToUser(ctx *fiber.Ctx) error {
+func (c *UserController) UpdateSelectedHouseHandler(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals("user_id").(string)
 	if !ok || userID == "" {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -261,8 +319,9 @@ func (c *UserController) AddHouseToUser(ctx *fiber.Ctx) error {
 		})
 	}
 
-	houseID := ctx.Params("house_id")
-	if err := c.userusecase.AddHouseToUser(userID, houseID);  err != nil {
+	nursingHouseID := ctx.Params("house_id")
+	updatedHouse, err := c.userusecase.UpdateSelectedHouse(userID, nursingHouseID)
+	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      	fiber.ErrNotFound.Message,
 			"status_code": 	fiber.ErrNotFound.Code,
@@ -275,5 +334,35 @@ func (c *UserController) AddHouseToUser(ctx *fiber.Ctx) error {
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
 		"message":     	"House added to user successfully",
+		"result": 		updatedHouse,
+	})
+}
+
+func (c *UserController) GetRetirementPlanHandler(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
+	requiredFunds, err := c.userusecase.CalculateRetirement(userID)
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrNotFound.Message,
+			"status_code": 	fiber.ErrNotFound.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      	"Success",
+		"status_code": 	fiber.StatusOK,
+		"message":     	"This is user's retirement plan successfully",
+		"result":		requiredFunds,
 	})
 }

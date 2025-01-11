@@ -41,7 +41,7 @@ func (u *NhUseCaseImpl) CreateNh(nursingHouse entities.NursingHouse, files []mul
 		return nil, err
 	}
 
-	if nursingHouse.Price <= 0 {
+	if nursingHouse.Price < 0 {
 		return nil, errors.New("price must be greater than zero")
     }
 
@@ -102,7 +102,7 @@ func (u *NhUseCaseImpl) GetNhNextID() (string, error) {
 }
 
 func (u *NhUseCaseImpl) UpdateNhByID(id string, nursingHouse entities.NursingHouse, files []multipart.FileHeader, imagesToDelete []string, ctx *fiber.Ctx) (*entities.NursingHouse, error) {
-	if nursingHouse.Price <= 0 {
+	if nursingHouse.Price < 0 {
 		return nil, errors.New("price must be greater than zero")
     }
 

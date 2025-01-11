@@ -72,7 +72,8 @@ func SetupNewsRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
 
 func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.Supabase) {
 	userRepository := userRepositories.NewGormUserRepository(db)
-	userUseCase := userUseCases.NewUserUseCase(userRepository, jwt, supa)
+	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
+	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, jwt, supa)
 	userController := userControllers.NewUserController(userUseCase)
 
 	authGroup := app.Group("/auth")
@@ -83,8 +84,10 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 	authGroup.Post("/logout", middlewares.JWTMiddleware(jwt), userController.LogoutHandler)
 
 	userGroup := app.Group("/user")
+	userGroup.Get("/", middlewares.JWTMiddleware(jwt), userController.GetUserByIDHandler)
+	userGroup.Get("/plan", middlewares.JWTMiddleware(jwt), userController.GetRetirementPlanHandler)
 	userGroup.Put("/", middlewares.JWTMiddleware(jwt), userController.UpdateUserByIDHandler)
-	userGroup.Put("/:house_id", middlewares.JWTMiddleware(jwt), userController.AddHouseToUser)
+	userGroup.Put("/:house_id", middlewares.JWTMiddleware(jwt), userController.UpdateSelectedHouseHandler)
 }
 
 func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {

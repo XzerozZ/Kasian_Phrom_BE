@@ -21,4 +21,4 @@ type RetirementPlan struct {
 }
 
 //RetirementFund			float64		`json:"retirement_fund"`
-//ExpectedMonthlyExpenses float64 	`json:"expected_monthly_expenses"`
+//ExpectedMonthlyExpenses 	float64 	`json:"expected_monthly_expenses"`

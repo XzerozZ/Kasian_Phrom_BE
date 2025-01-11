@@ -3,11 +3,13 @@ package usecases
 import (
 	"os"
 	"errors"
+	"strconv"
 	"mime/multipart"
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
+	retirementRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -20,21 +22,26 @@ type UserUseCase interface {
 	Login(email, password string) (string, *entities.User, error)
 	LoginAdmin(email, password string) (string, *entities.User, error)
 	ResetPassword(userID, oldPassword, newPassword string) error
+	GetUserByID(userID string) (*entities.User, error)
+	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
 	UpdateUserByID(id string, user entities.User, files *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
-	AddHouseToUser(userID, nursingHouseID string) error
+	UpdateSelectedHouse(userID, nursingHouseID string)  (*entities.SelectedHouse, error)
+	CalculateRetirement(userID string) (float64, error)
 }
 
 type UserUseCaseImpl struct {
-	userrepo 	repositories.UserRepository
-	jwtSecret	string
-	supa		configs.Supabase
+	userrepo 		repositories.UserRepository
+	retirementrepo 	retirementRepo.RetirementRepository
+	jwtSecret		string
+	supa			configs.Supabase
 }
 
-func NewUserUseCase(userrepo repositories.UserRepository, jwt configs.JWT, supa configs.Supabase) *UserUseCaseImpl {
+func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirementRepo.RetirementRepository, jwt configs.JWT, supa configs.Supabase) *UserUseCaseImpl {
 	return &UserUseCaseImpl{
-		userrepo: 	userrepo,
-		jwtSecret:	jwt.Secret,
-		supa:  		supa,
+		userrepo: 		userrepo,
+		retirementrepo: retirementrepo,
+		jwtSecret:		jwt.Secret,
+		supa:  			supa,
 	}
 }
 
@@ -53,7 +60,12 @@ func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entit
 	}
 
 	user.Password = string(hashedPassword)
-	return u.userrepo.CreateUser(user)
+	createdUser, err := u.userrepo.CreateUser(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return createdUser, nil
 }
 
 func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.User, error) {
@@ -135,6 +147,14 @@ func (u *UserUseCaseImpl) ResetPassword(userID, oldPassword, newPassword string)
 	return nil
 }
 
+func (u *UserUseCaseImpl) GetUserByID(userID string) (*entities.User, error) {
+	return u.userrepo.GetUserByID(userID)
+}
+
+func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHouse, error) {
+	return u.userrepo.GetSelectedHouse(userID)
+}
+
 func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error) {
 	existingUser, err := u.userrepo.GetUserByID(id)
 	if err != nil {
@@ -172,15 +192,95 @@ func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *mu
 	return updatedUser, nil
 }
 
-func (u *UserUseCaseImpl) AddHouseToUser(userID, nursingHouseID string) error {
-	user, err := u.userrepo.GetUserByID(userID)
+func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*entities.SelectedHouse, error) {
+	selectedHouse, err := u.userrepo.GetSelectedHouse(userID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := u.userrepo.UpdateUserHouseID(user.ID, &nursingHouseID); err != nil {
-        return err
+	selectedHouse.NursingHouseID = nursingHouseID
+	updatedHouse, err := u.userrepo.UpdateSelectedHouse(selectedHouse)
+	if err != nil {
+        return nil, err
     }
 
-	return nil
+	if nursingHouseID == "00001" {
+        retirementPlan, err := u.retirementrepo.GetRetirementByID(userID)
+        if err != nil {
+            return nil, err
+        }
+
+        retirementPlan.CurrentSavings += selectedHouse.CurrentMoney
+		selectedHouse.CurrentMoney = 0
+        _, err = u.retirementrepo.UpdateRetirementPlan(retirementPlan)
+        if err != nil {
+            return nil, err
+        }
+
+		updatedHouse, err = u.userrepo.UpdateSelectedHouse(selectedHouse)
+        if err != nil {
+            return nil, err
+        }
+
+		return updatedHouse, nil
+    }
+
+	return updatedHouse, nil
+}
+
+func CalculateAllAssets(user *entities.User) (float64, error) {
+	total := 0.0
+	for _, asset := range user.Assets {
+		endYear, err := strconv.Atoi(asset.EndYear)
+		if err != nil {
+			return 0, err
+		}
+
+		remainingMonths := (endYear - asset.UpdatedAt.Year() -1 ) * 12 + (12 - int(asset.UpdatedAt.Month()) + 1)
+		if remainingMonths <= 0 { 
+			return 0, err
+		}
+		remainingCost := (asset.TotalCost - asset.CurrentMoney) / float64(remainingMonths)
+		total += remainingCost
+	}
+
+	return total, nil
+}
+
+func (u *UserUseCaseImpl) CalculateRetirement(userID string) (float64, error) {
+	user, err := u.userrepo.GetUserByID(userID)
+	if err != nil {
+		return 0, err
+	}
+
+	allCostAsset, err := CalculateAllAssets(user)
+	if err != nil {
+		return 0, err
+	}
+
+	plan := user.RetirementPlan
+	nursingHousePrice := 0.0
+	if user.House.NursingHouse.ID != "" {
+		nursingHousePrice = float64(user.House.NursingHouse.Price)
+	}
+
+	monthlyPlan := utils.MonthlyExpensesPlan{
+		MonthlyExpenses:      	plan.MonthlyExpenses,
+		AnnualExpenseIncrease: 	plan.AnnualExpenseIncrease,
+		ExpectedInflation:    	plan.ExpectedInflation,
+		Age:                  	plan.Age,
+		RetirementAge:        	plan.RetirementAge,
+		ExpectLifespan:       	plan.ExpectLifespan,
+		YearsUntilRetirement: 	plan.RetirementAge - plan.Age,
+		YearUntilLifeSpan:		plan.ExpectLifespan - plan.RetirementAge,
+		AllCostAsset:           allCostAsset,
+		NursingHousePrice:    	nursingHousePrice,
+	}
+
+	requiredFunds, err := utils.CalculateMonthlySavings(monthlyPlan)
+	if err != nil {
+		return 0, err
+	}
+
+	return requiredFunds, nil
 }
