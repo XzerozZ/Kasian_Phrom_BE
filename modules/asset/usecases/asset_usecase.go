@@ -14,7 +14,6 @@ type AssetUseCase interface {
 	GetAssetByUserID(userID string) ([]entities.Asset, error)
 	UpdateAssetByID(id string, asset entities.Asset) (*entities.Asset, error)
 	DeleteAssetByID(id string) error
-	CalculateMonthlyExpenses(asset *entities.Asset) (float64, error)
 }
 
 type AssetUseCaseImpl struct {
@@ -107,24 +106,4 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string) error {
     }
 
     return nil
-}
-
-func (u *AssetUseCaseImpl) CalculateMonthlyExpenses(asset *entities.Asset) (float64, error) {
-    endYear, err := strconv.Atoi(asset.EndYear)
-    if err != nil {
-        return 0, err
-    }
-
-    currentYear := asset.UpdatedAt.Year()
-    if endYear < currentYear {
-        return 0, errors.New("end year must be greater than or equal to current year")
-    }
-
-    remainingMonths := (endYear - currentYear - 1) * 12 + (12 - int(asset.UpdatedAt.Month()) + 1)
-    remainingCost := asset.TotalCost - asset.CurrentMoney
-    if remainingCost < 0 {
-        return 0, errors.New("current money cannot exceed total cost")
-    }
-
-    return remainingCost / float64(remainingMonths), nil
 }

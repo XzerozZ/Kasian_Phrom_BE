@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"mime/multipart"
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
 
@@ -244,11 +245,27 @@ func (c *UserController) GetSelectedHouseHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
+	data, err := c.userusecase.GetUserByID(userID)
+	monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpenses(data)
+    if err != nil {
+        return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+            "status":      fiber.ErrInternalServerError.Message,
+            "status_code": fiber.ErrInternalServerError.Code,
+            "message":     err.Error(),
+            "result":      nil,
+        })
+    }
+
+	response := fiber.Map{
+        "selected": selectedHouse,
+        "monthly_expenses": monthlyExpenses,
+    }
+
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "Selected house retrieved successfully",
-		"result":      selectedHouse,
+		"result":      response,
 	})
 }
 

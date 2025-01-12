@@ -3,7 +3,6 @@ package usecases
 import (
 	"os"
 	"errors"
-	"strconv"
 	"mime/multipart"
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
@@ -26,7 +25,7 @@ type UserUseCase interface {
 	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
 	UpdateUserByID(id string, user entities.User, files *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
 	UpdateSelectedHouse(userID, nursingHouseID string)  (*entities.SelectedHouse, error)
-	CalculateRetirement(userID string) (float64, error)
+	CalculateRetirement(userID string) (fiber.Map, error)
 }
 
 type UserUseCaseImpl struct {
@@ -228,59 +227,70 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 	return updatedHouse, nil
 }
 
-func CalculateAllAssets(user *entities.User) (float64, error) {
-	total := 0.0
-	for _, asset := range user.Assets {
-		endYear, err := strconv.Atoi(asset.EndYear)
-		if err != nil {
-			return 0, err
-		}
-
-		remainingMonths := (endYear - asset.UpdatedAt.Year() -1 ) * 12 + (12 - int(asset.UpdatedAt.Month()) + 1)
-		if remainingMonths <= 0 { 
-			return 0, err
-		}
-		remainingCost := (asset.TotalCost - asset.CurrentMoney) / float64(remainingMonths)
-		total += remainingCost
-	}
-
-	return total, nil
-}
-
-func (u *UserUseCaseImpl) CalculateRetirement(userID string) (float64, error) {
+func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) {
 	user, err := u.userrepo.GetUserByID(userID)
 	if err != nil {
-		return 0, err
+		return fiber.Map{}, err
 	}
 
-	allCostAsset, err := CalculateAllAssets(user)
+	allCostAsset, err := utils.CalculateAllAssetsMonthlyExpenses(user)
 	if err != nil {
-		return 0, err
+		return fiber.Map{}, err
 	}
 
 	plan := user.RetirementPlan
 	nursingHousePrice := 0.0
 	if user.House.NursingHouse.ID != "" {
-		nursingHousePrice = float64(user.House.NursingHouse.Price)
+		nursingHousePrice, err = utils.CalculateNursingHouseMonthlyExpenses(user)
+		if err != nil {
+			return fiber.Map{}, err
+		}
 	}
-
+	
+	monthsUntilRetirement := (plan.RetirementAge * 12) - plan.AgeInMonths
 	monthlyPlan := utils.MonthlyExpensesPlan{
-		MonthlyExpenses:      	plan.MonthlyExpenses,
-		AnnualExpenseIncrease: 	plan.AnnualExpenseIncrease,
-		ExpectedInflation:    	plan.ExpectedInflation,
-		Age:                  	plan.Age,
-		RetirementAge:        	plan.RetirementAge,
-		ExpectLifespan:       	plan.ExpectLifespan,
-		YearsUntilRetirement: 	plan.RetirementAge - plan.Age,
-		YearUntilLifeSpan:		plan.ExpectLifespan - plan.RetirementAge,
-		AllCostAsset:           allCostAsset,
-		NursingHousePrice:    	nursingHousePrice,
+		ExpectedMonthlyExpenses:      	plan.ExpectedMonthlyExpenses,
+		AnnualExpenseIncrease: 			plan.AnnualExpenseIncrease,
+		ExpectedInflation:    			plan.ExpectedInflation,
+		Age:                  			plan.Age,
+		RetirementAge:        			plan.RetirementAge,
+		ExpectLifespan:       			plan.ExpectLifespan,
+		MonthsUntilRetirement: 			monthsUntilRetirement,
+		YearUntilLifeSpan:				plan.ExpectLifespan - plan.RetirementAge,
+		AllCostAsset:           		allCostAsset,
+		NursingHousePrice:    			nursingHousePrice,
 	}
 
 	requiredFunds, err := utils.CalculateMonthlySavings(monthlyPlan)
 	if err != nil {
-		return 0, err
+		return fiber.Map{}, err
 	}
 
-	return requiredFunds, nil
+	requiredAllFunds, err := utils.CalculateRetirementFunds(monthlyPlan)
+	if err != nil {
+		return fiber.Map{}, err
+	}
+
+	assetSavings, err :=  utils.CalculateAllAssetSavings(user)
+	if err != nil {
+		return fiber.Map{}, err
+	}
+	
+	yearUntilLifespan := plan.ExpectLifespan - plan.RetirementAge
+	totalNursingHouseCost := float64(user.House.NursingHouse.Price * yearUntilLifespan) - user.House.CurrentMoney
+	allRequiredFund := requiredAllFunds + allCostAsset + totalNursingHouseCost
+	allSaving:= plan.CurrentSavings + assetSavings + user.House.CurrentMoney
+	allMoney := allSaving + plan.CurrentTotalInvestment
+	stillNeed := allRequiredFund - allMoney 
+	response := fiber.Map{
+		"allRequiredFund":				allRequiredFund,
+		"stillneed":					stillNeed,
+		"allretirementfund": 			requiredAllFunds,
+        "monthly_expenses": 			requiredFunds,
+		"all_money": 					float64(allMoney),
+		"saving": 						float64(allSaving),
+		"investment": 					float64(plan.CurrentTotalInvestment),
+    }
+
+	return response, nil
 }

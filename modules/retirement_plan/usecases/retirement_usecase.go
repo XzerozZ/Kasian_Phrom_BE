@@ -27,18 +27,26 @@ func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementP
 	}
 	
 	layout := "02-01-2006"
-	irthDate, err := time.Parse(layout, retirement.BirthDate)
+	birthDate, err := time.Parse(layout, retirement.BirthDate)
 	if err != nil {
 		return nil, errors.New("invalid BirthDate format, expected DD-MM-YYYY")
 	}
 
 	now := time.Now()
-	age := now.Year() - irthDate.Year()
-	if now.YearDay() < irthDate.YearDay() {
-		age--
+	years := now.Year() - birthDate.Year()
+	months := int(now.Month()) - int(birthDate.Month())
+	if now.Day() < birthDate.Day() {
+		months--
+	}
+	
+	if months < 0 {
+		years--
+		months += 12
 	}
 
-	retirement.Age = age
+	ageInMonths := (years * 12) + months
+	retirement.AgeInMonths = ageInMonths
+	retirement.Age = years
 	if retirement.CurrentSavings < 0 {
 		return nil, errors.New("CurrentSavings must be greater than or equal to zero")
 	}
@@ -79,7 +87,7 @@ func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementP
 		return nil, errors.New("AnnualInvestmentReturn must be greater than or equal to zero")
 	}
 
-	if age >= retirement.RetirementAge {
+	if years >= retirement.RetirementAge {
 		return nil, errors.New("Age must be less than RetirementAge")
 	}
 

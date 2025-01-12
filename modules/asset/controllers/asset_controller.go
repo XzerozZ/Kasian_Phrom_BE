@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/usecases"
 
@@ -76,7 +77,7 @@ func (c *AssetController) GetAssetByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	monthlyExpenses, err := c.assetusecase.CalculateMonthlyExpenses(data)
+	monthlyExpenses, err := utils.CalculateMonthlyExpenses(data)
     if err != nil {
         return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
             "status":      fiber.ErrInternalServerError.Message,
@@ -131,7 +132,7 @@ func (c *AssetController) GetAssetByUserIDHandler(ctx *fiber.Ctx) error {
 
 	var assetsWithExpenses []fiber.Map
     for _, asset := range assets {
-        monthlyExpenses, err := c.assetusecase.CalculateMonthlyExpenses(&asset)
+        monthlyExpenses, err := utils.CalculateMonthlyExpenses(&asset)
         if err != nil {
             return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
                 "status":      fiber.ErrInternalServerError.Message,
