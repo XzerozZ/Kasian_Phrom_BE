@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"os"
+	"time"
 	"errors"
 	"mime/multipart"
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
@@ -25,6 +26,7 @@ type UserUseCase interface {
 	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
 	UpdateUserByID(id string, user entities.User, files *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
 	UpdateSelectedHouse(userID, nursingHouseID string)  (*entities.SelectedHouse, error)
+	ForgotPassword(email string) error
 	CalculateRetirement(userID string) (fiber.Map, error)
 }
 
@@ -204,6 +206,39 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
     }
 
 	return updatedHouse, nil
+}
+
+func (u *UserUseCaseImpl) ForgotPassword(email string) error {
+	user, err := u.userrepo.FindUserByEmail(email)
+	if err != nil {
+		return errors.New("invalid email")
+	}
+
+	userID := user.ID
+	otpCode, err := utils.GenerateRandomOTP(6, true)
+    if err != nil {
+        return err
+    }
+
+	expiresAt := time.Now().Add(5 * time.Minute)
+	otp, err := u.userrepo.GetOTPByUserID(userID)
+	if err == nil && otp != nil {
+		if err := u.userrepo.DeleteOTP(userID); err != nil {
+			return err
+		}
+	}
+
+	newOTP := &entities.OTP{
+		UserID:    userID,
+		OTP:       otpCode,
+		ExpiresAt: expiresAt,
+	}
+
+	if err := u.userrepo.CreateOTP(newOTP); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) {

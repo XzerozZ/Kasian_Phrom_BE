@@ -64,8 +64,7 @@ func (r *GormFavRepository) CheckFav(userID string, nursingHouseID string) error
 }
 
 func (r *GormFavRepository) DeleteFavByID(userID string, nursingHouseID string) error {
-	if err := r.db.Where("user_id = ? AND nursing_house_id = ?", userID, nursingHouseID).
-		Delete(&entities.Favorite{}).Error; err != nil {
+	if err := r.db.Where("user_id = ? AND nursing_house_id = ?", userID, nursingHouseID).Delete(&entities.Favorite{}).Error; err != nil {
 		return err
 	}
 

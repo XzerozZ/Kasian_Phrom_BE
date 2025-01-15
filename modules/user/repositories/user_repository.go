@@ -23,6 +23,9 @@ type UserRepository interface {
 	GetRoleByName(name string) (entities.Role, error)
 	UpdateUserByID(user *entities.User) (*entities.User, error)
 	UpdateSelectedHouse(selectedHouse *entities.SelectedHouse) (*entities.SelectedHouse, error)
+	CreateOTP(otp *entities.OTP) error
+	GetOTPByUserID(userID string) (*entities.OTP, error)
+	DeleteOTP(userID string) error
 }
 
 func (r *GormUserRepository) CreateUser(user *entities.User) (*entities.User, error) {
@@ -112,4 +115,29 @@ func (r *GormUserRepository) UpdateSelectedHouse(selectedHouse *entities.Selecte
     }
 
     return r.GetSelectedHouse(selectedHouse.UserID)
+}
+
+func (r *GormUserRepository) CreateOTP(otp *entities.OTP) error {
+	if err := r.db.Create(otp).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *GormUserRepository) GetOTPByUserID(userID string) (*entities.OTP, error) {
+	var otp entities.OTP
+	if err := r.db.Where("user_id = ?", userID).First(&otp).Error; err != nil {
+		return nil, err
+	}
+	
+	return &otp, nil
+}
+
+func (r *GormUserRepository) DeleteOTP(userID string) error {
+	if err := r.db.Delete(&entities.OTP{}, "user_id = ?", userID).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
