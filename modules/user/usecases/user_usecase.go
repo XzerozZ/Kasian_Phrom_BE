@@ -199,29 +199,8 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 
 	selectedHouse.NursingHouseID = nursingHouseID
 	updatedHouse, err := u.userrepo.UpdateSelectedHouse(selectedHouse)
-	if err != nil {
+    if err != nil {
         return nil, err
-    }
-
-	if nursingHouseID == "00001" {
-        retirementPlan, err := u.retirementrepo.GetRetirementByID(userID)
-        if err != nil {
-            return nil, err
-        }
-
-        retirementPlan.CurrentSavings += selectedHouse.CurrentMoney
-		selectedHouse.CurrentMoney = 0
-        _, err = u.retirementrepo.UpdateRetirementPlan(retirementPlan)
-        if err != nil {
-            return nil, err
-        }
-
-		updatedHouse, err = u.userrepo.UpdateSelectedHouse(selectedHouse)
-        if err != nil {
-            return nil, err
-        }
-
-		return updatedHouse, nil
     }
 
 	return updatedHouse, nil

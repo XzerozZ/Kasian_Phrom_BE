@@ -104,7 +104,10 @@ func (r *GormUserRepository) UpdateUserByID(user *entities.User) (*entities.User
 }
 
 func (r *GormUserRepository) UpdateSelectedHouse(selectedHouse *entities.SelectedHouse) (*entities.SelectedHouse, error) {
-    if err := r.db.Save(&selectedHouse).Error; err != nil {
+    if err := r.db.Model(&entities.SelectedHouse{}).Where("user_id = ?", selectedHouse.UserID).Updates(map[string]interface{}{
+        "nursing_house_id": selectedHouse.NursingHouseID,
+        "current_money":    selectedHouse.CurrentMoney,
+    }).Error; err != nil {
         return nil, err
     }
 

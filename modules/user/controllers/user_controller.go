@@ -336,7 +336,16 @@ func (c *UserController) UpdateSelectedHouseHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	nursingHouseID := ctx.Params("house_id")
+	nursingHouseID := ctx.Params("nh_id")
+	if nursingHouseID == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Invalid request: Missing nursing house ID",
+			"result":      nil,
+		})
+	}
+
 	updatedHouse, err := c.userusecase.UpdateSelectedHouse(userID, nursingHouseID)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
@@ -350,7 +359,7 @@ func (c *UserController) UpdateSelectedHouseHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      	"Success",
 		"status_code": 	fiber.StatusOK,
-		"message":     	"House added to user successfully",
+		"message":     	"House Updated to user successfully",
 		"result": 		updatedHouse,
 	})
 }
