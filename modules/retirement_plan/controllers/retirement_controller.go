@@ -25,7 +25,7 @@ func (c *RetirementController) CreateRetirementHandler(ctx *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
-	
+
 	var retirement entities.RetirementPlan
 	if err := ctx.BodyParser(&retirement); err != nil {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{

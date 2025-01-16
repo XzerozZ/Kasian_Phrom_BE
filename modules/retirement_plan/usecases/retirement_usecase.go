@@ -1,8 +1,9 @@
 package usecases
 
 import (
-	"time"
 	"errors"
+	"time"
+
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 )
@@ -13,11 +14,11 @@ type RetirementUseCase interface {
 }
 
 type RetirementUseCaseImpl struct {
-	retirerepo 		repositories.RetirementRepository
+	retirerepo repositories.RetirementRepository
 }
 
 func NewRetirementUseCase(retirerepo repositories.RetirementRepository) *RetirementUseCaseImpl {
-	return &RetirementUseCaseImpl{retirerepo:  retirerepo}
+	return &RetirementUseCaseImpl{retirerepo: retirerepo}
 }
 
 func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementPlan) (*entities.RetirementPlan, error) {
@@ -25,7 +26,7 @@ func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementP
 	if err != nil {
 		return nil, err
 	}
-	
+
 	layout := "02-01-2006"
 	birthDate, err := time.Parse(layout, retirement.BirthDate)
 	if err != nil {
@@ -38,7 +39,7 @@ func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementP
 	if now.Day() < birthDate.Day() {
 		months--
 	}
-	
+
 	if months < 0 {
 		years--
 		months += 12
@@ -97,14 +98,13 @@ func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementP
 
 	retirement.ID = id
 	createdRetire, err := u.retirerepo.CreateRetirement(&retirement)
-    if err != nil { 
-        return nil, err
-    }
-    
-    return createdRetire, nil
+	if err != nil {
+		return nil, err
+	}
+
+	return createdRetire, nil
 }
 
 func (u *RetirementUseCaseImpl) GetRetirementByID(id string) (*entities.RetirementPlan, error) {
 	return u.retirerepo.GetRetirementByID(id)
 }
-

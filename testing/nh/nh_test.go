@@ -110,14 +110,14 @@ func TestNhHandlers(t *testing.T) {
 
 	t.Run("UpdateNhByIDHandler - Success", func(t *testing.T) {
 		id := "123"
-		
+
 		existingNh := &entities.NursingHouse{
-			Name: "Old Name",
+			Name:    "Old Name",
 			Address: "Old Address",
-			Images: []entities.Image{{ImageLink: "old_image.jpg"}},
+			Images:  []entities.Image{{ImageLink: "old_image.jpg"}},
 		}
 		mockUseCase.On("GetNhByID", id).Return(existingNh, nil)
-		
+
 		body := new(bytes.Buffer)
 		writer := multipart.NewWriter(body)
 
@@ -128,7 +128,7 @@ func TestNhHandlers(t *testing.T) {
 
 		part, _ := writer.CreateFormFile("images", "new_test.jpg")
 		_, _ = part.Write([]byte("dummy image content"))
-		
+
 		writer.Close()
 
 		updatedNh := &entities.NursingHouse{
@@ -136,13 +136,13 @@ func TestNhHandlers(t *testing.T) {
 			Address: "456 Updated Address",
 			Status:  "active",
 		}
-		
-		mockUseCase.On("UpdateNhByID", 
+
+		mockUseCase.On("UpdateNhByID",
 			id,
 			mock.MatchedBy(func(nh entities.NursingHouse) bool {
 				return nh.Name == "Updated Nursing Home" &&
-					   nh.Address == "456 Updated Address" &&
-					   nh.Status == "active"
+					nh.Address == "456 Updated Address" &&
+					nh.Status == "active"
 			}),
 			mock.AnythingOfType("[]multipart.FileHeader"),
 			[]string{"old_image.jpg"},
@@ -151,11 +151,11 @@ func TestNhHandlers(t *testing.T) {
 
 		req := httptest.NewRequest("PUT", "/nh/"+id, body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
-	
+
 		resp, err := app.Test(req, -1)
 		assert.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-		
+
 		mockUseCase.AssertExpectations(t)
 	})
 }

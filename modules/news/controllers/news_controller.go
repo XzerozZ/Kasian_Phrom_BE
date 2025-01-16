@@ -2,7 +2,8 @@ package controllers
 
 import (
 	"strconv"
-  	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
 
 	"github.com/gofiber/fiber/v2"
@@ -39,7 +40,7 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
 	}
 
 	imageDescFile, _ := ctx.FormFile("image_desc")
-	if len(title) == 0  {
+	if len(title) == 0 {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
 			"status":      fiber.ErrBadRequest.Message,
 			"status_code": fiber.ErrBadRequest.Code,
@@ -94,18 +95,18 @@ func (c *NewsController) CreateNewsHandler(ctx *fiber.Ctx) error {
 	data, err := c.newsusecase.CreateNews(req, imageTitleFile, imageDescFile, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrInternalServerError.Message,
-			"status_code": 	fiber.ErrInternalServerError.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"status":		"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"News created successfully",
-		"result":      	data,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "News created successfully",
+		"result":      data,
 	})
 }
 
@@ -113,18 +114,18 @@ func (c *NewsController) GetAllNewsHandler(ctx *fiber.Ctx) error {
 	data, err := c.newsusecase.GetAllNews()
 	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrInternalServerError.Message,
-			"status_code": 	fiber.ErrInternalServerError.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"News retrieved successfully",
-		"result":      	data,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "News retrieved successfully",
+		"result":      data,
 	})
 }
 
@@ -133,18 +134,18 @@ func (c *NewsController) GetNewsByIDHandler(ctx *fiber.Ctx) error {
 	data, err := c.newsusecase.GetNewsByID(id)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"News retrieved successfully",
-		"result":      	data,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "News retrieved successfully",
+		"result":      data,
 	})
 }
 
@@ -152,18 +153,18 @@ func (c *NewsController) GetNewsNextIDHandler(ctx *fiber.Ctx) error {
 	data, err := c.newsusecase.GetNewsNextID()
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"News retrieved successfully",
-		"result":      	data,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "News retrieved successfully",
+		"result":      data,
 	})
 }
 
@@ -178,7 +179,7 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
-	
+
 	title := form.Value["title"]
 	imageTitleFile, _ := ctx.FormFile("image_title")
 	imageDescFile, _ := ctx.FormFile("image_desc")
@@ -239,37 +240,37 @@ func (c *NewsController) UpdateNewsByIDHandler(ctx *fiber.Ctx) error {
 	updatedNews, err := c.newsusecase.UpdateNewsByID(id, news, imageTitleFile, imageDescFile, shouldDeleteImageDesc, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"News retrieved successfully",
-		"result":      	updatedNews,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "News retrieved successfully",
+		"result":      updatedNews,
 	})
 }
 
 func (c *NewsController) DeleteNewsByIDHandler(ctx *fiber.Ctx) error {
-    id := ctx.Params("id")
-    err := c.newsusecase.DeleteNewsByID(id)
-    if err != nil {
-        return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "status":      "Error",
-            "status_code": fiber.StatusInternalServerError,
-            "message":     err.Error(),
-            "result":      nil,
-        })
-    }
+	id := ctx.Params("id")
+	err := c.newsusecase.DeleteNewsByID(id)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusInternalServerError,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
 
-    return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-        "status":      "Success",
-        "status_code": fiber.StatusOK,
-        "message":     "News deleted successfully",
-        "result":      nil,
-    })
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "News deleted successfully",
+		"result":      nil,
+	})
 }

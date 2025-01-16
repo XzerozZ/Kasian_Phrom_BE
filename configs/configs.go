@@ -8,16 +8,16 @@ import (
 )
 
 type Configs struct {
-	PostgreSQL 	   PostgreSQL
-	JWT		   	   JWT
-	App       	   Fiber
-	Supabase	   Supabase
-	Mail		   Mail
+	PostgreSQL PostgreSQL
+	JWT        JWT
+	App        Fiber
+	Supabase   Supabase
+	Mail       Mail
 }
 
 type Fiber struct {
-	Host 	 string
-	Port 	 string
+	Host string
+	Port string
 }
 
 type PostgreSQL struct {
@@ -26,24 +26,24 @@ type PostgreSQL struct {
 	Username string
 	Password string
 	Database string
-	SSLMode	 string
+	SSLMode  string
 }
 
 type JWT struct {
-	Secret	 string
+	Secret string
 }
 
 type Supabase struct {
-	URL		 string
-	Key		 string
-	Bucket	 string
+	URL    string
+	Key    string
+	Bucket string
 }
 
 type Mail struct {
-	Host	 string
-	Port     string
-	Sender	 string
-	Key		 string
+	Host   string
+	Port   string
+	Sender string
+	Key    string
 }
 
 func LoadConfigs() *Configs {
@@ -62,22 +62,22 @@ func LoadConfigs() *Configs {
 			SSLMode:  os.Getenv("SSL_Mode"),
 		},
 		App: Fiber{
-			Host: 	  os.Getenv("APP_HOST"),
-			Port: 	  os.Getenv("APP_PORT"),
+			Host: os.Getenv("APP_HOST"),
+			Port: os.Getenv("APP_PORT"),
 		},
 		JWT: JWT{
-			Secret:	  os.Getenv("JWT_SECRET"),
+			Secret: os.Getenv("JWT_SECRET"),
 		},
 		Supabase: Supabase{
-			URL: 	  os.Getenv("SUPABASE_URL"),
-			Key: 	  os.Getenv("SUPABASE_KEY"),
-			Bucket:   os.Getenv("BUCKET_NAME"),
+			URL:    os.Getenv("SUPABASE_URL"),
+			Key:    os.Getenv("SUPABASE_KEY"),
+			Bucket: os.Getenv("BUCKET_NAME"),
 		},
 		Mail: Mail{
-			Host:	  os.Getenv("EMAIL_HOST"),
-			Port:	  os.Getenv("EMAIL_PORT"),
-			Sender:	  os.Getenv("EMAIL_USER"),
-			Key:	  os.Getenv("EMAIL_PASS"),
+			Host:   os.Getenv("EMAIL_HOST"),
+			Port:   os.Getenv("EMAIL_PORT"),
+			Sender: os.Getenv("EMAIL_USER"),
+			Key:    os.Getenv("EMAIL_PASS"),
 		},
 	}
 }

@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
-	
+
 	"gorm.io/gorm"
 )
 
@@ -107,14 +107,14 @@ func (r *GormUserRepository) UpdateUserByID(user *entities.User) (*entities.User
 }
 
 func (r *GormUserRepository) UpdateSelectedHouse(selectedHouse *entities.SelectedHouse) (*entities.SelectedHouse, error) {
-    if err := r.db.Model(&entities.SelectedHouse{}).Where("user_id = ?", selectedHouse.UserID).Updates(map[string]interface{}{
-        "nursing_house_id": selectedHouse.NursingHouseID,
-        "current_money":    selectedHouse.CurrentMoney,
-    }).Error; err != nil {
-        return nil, err
-    }
+	if err := r.db.Model(&entities.SelectedHouse{}).Where("user_id = ?", selectedHouse.UserID).Updates(map[string]interface{}{
+		"nursing_house_id": selectedHouse.NursingHouseID,
+		"current_money":    selectedHouse.CurrentMoney,
+	}).Error; err != nil {
+		return nil, err
+	}
 
-    return r.GetSelectedHouse(selectedHouse.UserID)
+	return r.GetSelectedHouse(selectedHouse.UserID)
 }
 
 func (r *GormUserRepository) CreateOTP(otp *entities.OTP) error {
@@ -130,7 +130,7 @@ func (r *GormUserRepository) GetOTPByUserID(userID string) (*entities.OTP, error
 	if err := r.db.Where("user_id = ?", userID).First(&otp).Error; err != nil {
 		return nil, err
 	}
-	
+
 	return &otp, nil
 }
 
