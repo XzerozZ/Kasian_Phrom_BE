@@ -35,14 +35,16 @@ type UserUseCaseImpl struct {
 	retirementrepo 	retirementRepo.RetirementRepository
 	jwtSecret		string
 	supa			configs.Supabase
+	mail			configs.Mail
 }
 
-func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirementRepo.RetirementRepository, jwt configs.JWT, supa configs.Supabase) *UserUseCaseImpl {
+func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirementRepo.RetirementRepository, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) *UserUseCaseImpl {
 	return &UserUseCaseImpl{
 		userrepo: 		userrepo,
 		retirementrepo: retirementrepo,
 		jwtSecret:		jwt.Secret,
 		supa:  			supa,
+		mail:			mail,
 	}
 }
 
@@ -237,6 +239,10 @@ func (u *UserUseCaseImpl) ForgotPassword(email string) error {
 	if err := u.userrepo.CreateOTP(newOTP); err != nil {
 		return err
 	}
+
+    if err := utils.SendMail("./assets/OTPMail.html", user, otpCode, u.mail); err != nil {
+        return err
+    }
 
 	return nil
 }
