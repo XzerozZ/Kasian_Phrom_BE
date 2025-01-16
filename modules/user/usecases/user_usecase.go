@@ -27,6 +27,7 @@ type UserUseCase interface {
 	UpdateUserByID(id string, user entities.User, files *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
 	UpdateSelectedHouse(userID, nursingHouseID string)  (*entities.SelectedHouse, error)
 	ForgotPassword(email string) error
+	VerifyOTP(email, otpCode string) error
 	CalculateRetirement(userID string) (fiber.Map, error)
 }
 
@@ -243,6 +244,32 @@ func (u *UserUseCaseImpl) ForgotPassword(email string) error {
     if err := utils.SendMail("./assets/OTPMail.html", user, otpCode, u.mail); err != nil {
         return err
     }
+
+	return nil
+}
+
+func (u *UserUseCaseImpl) VerifyOTP(email, otpCode string) error {
+	user, err := u.userrepo.FindUserByEmail(email)
+	if err != nil {
+		return err
+	}
+
+	otp, err := u.userrepo.GetOTPByUserID(user.ID)
+	if err != nil {
+		return err
+	}
+
+	if time.Now().After(otp.ExpiresAt) {
+		return errors.New("OTP is expired")
+	}
+
+	if otp.OTP != otpCode {
+		return errors.New("OTP is incorrect")
+	}
+
+	if err := u.userrepo.DeleteOTP(user.ID); err != nil {
+		return err
+	}
 
 	return nil
 }

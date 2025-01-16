@@ -81,6 +81,7 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 	authGroup.Post("/login", userController.LoginHandler)
 	authGroup.Post("/admin/login", userController.LoginAdminHandler)
 	authGroup.Post("/forgotpassword", userController.ForgotPasswordHandler)
+	authGroup.Post("/forgotpassword/otp", userController.VerifyOTPHandler)
 	authGroup.Put("/resetpassword", middlewares.JWTMiddleware(jwt), userController.ResetPasswordHandler)
 	authGroup.Post("/logout", middlewares.JWTMiddleware(jwt), userController.LogoutHandler)
 
