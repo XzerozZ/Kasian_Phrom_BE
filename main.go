@@ -17,7 +17,7 @@ func main() {
 		BodyLimit: math.MaxInt64,
 	})
 	
-	servers.SetupRoutes(app, config.JWT, config.Supabase)
+	servers.SetupRoutes(app, config.JWT, config.Supabase, config.Mail)
 	serverAddress := config.App.Host + ":" + config.App.Port
 	log.Printf("Server is running on %s", serverAddress)
 	log.Fatal(app.Listen(serverAddress))

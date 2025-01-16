@@ -29,7 +29,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
-func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase) {
+func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase, mail configs.Mail) {
 	db := database.GetDB()
 	if db == nil {
 		log.Fatal("Failed to initialize database")
@@ -45,7 +45,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase) {
 	SetupNewsRoutes(app, db, supa)
 	setupFavoriteRoutes(app, jwt, db)
 	setupAssetRoutes(app, jwt, db)
-	setupUserRoutes(app, db, jwt, supa)
+	setupUserRoutes(app, db, jwt, supa, mail)
 	setupRetirementRoutes(app, jwt, db)
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
@@ -70,10 +70,10 @@ func SetupNewsRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
 	newsGroup.Delete("/:id", newsController.DeleteNewsByIDHandler)
 }
 
-func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.Supabase) {
+func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) {
 	userRepository := userRepositories.NewGormUserRepository(db)
 	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
-	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, jwt, supa)
+	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, jwt, supa, mail)
 	userController := userControllers.NewUserController(userUseCase)
 
 	authGroup := app.Group("/auth")

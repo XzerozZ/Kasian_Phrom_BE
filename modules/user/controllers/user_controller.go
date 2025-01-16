@@ -34,6 +34,42 @@ func (c *UserController) RegisterHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
+	if req.Username == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Username is missing",
+			"result":      nil,
+		})
+	}
+
+	if req.Email == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Email is missing",
+			"result":      nil,
+		})
+	}
+
+	if req.Password == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Password is missing",
+			"result":      nil,
+		})
+	}
+
+	if req.RoleName == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "RoleName is missing",
+			"result":      nil,
+		})
+	}
+
 	user := &entities.User{
 		Username: req.Username,
 		Email:    req.Email,
@@ -73,6 +109,24 @@ func (c *UserController) LoginHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
+	if req.Email == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Email is missing",
+			"result":      nil,
+		})
+	}
+
+	if req.Password == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Password is missing",
+			"result":      nil,
+		})
+	}
+
 	token, user, err := c.userusecase.Login(req.Email, req.Password)
 	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
@@ -108,6 +162,24 @@ func (c *UserController) LoginAdminHandler(ctx *fiber.Ctx) error {
 			"status_code": 	fiber.ErrInternalServerError.Code,
 			"message":     	err.Error(),
 			"result":      	nil,
+		})
+	}
+
+	if req.Email == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Email is missing",
+			"result":      nil,
+		})
+	}
+
+	if req.Password == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Password is missing",
+			"result":      nil,
 		})
 	}
 
@@ -177,7 +249,6 @@ func (c *UserController) ResetPasswordHandler(ctx *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
-
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
