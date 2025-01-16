@@ -298,6 +298,57 @@ func (c *UserController) ForgotPasswordHandler(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *UserController) VerifyOTPHandler(ctx *fiber.Ctx) error {
+	type OTPRequest struct {
+		Email string `json:"email" validate:"required,email"`
+		OTP   string `json:"otp"`
+	}
+
+	var req OTPRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      	fiber.ErrInternalServerError.Message,
+			"status_code": 	fiber.ErrInternalServerError.Code,
+			"message":     	err.Error(),
+			"result":      	nil,
+		})
+	}
+
+	if req.Email == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Email is missing",
+			"result":      nil,
+		})
+	}
+
+	if req.OTP == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "OTP is missing",
+			"result":      nil,
+		})
+	}
+
+	err := c.userusecase.VerifyOTP(req.Email, req.OTP)
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "OTP is correct",
+	})
+}
+
 func (c *UserController) LogoutHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
