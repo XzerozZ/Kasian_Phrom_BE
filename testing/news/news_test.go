@@ -6,11 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/news/controllers"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
-	"github.com/XzerozZ/Kasian_Phrom_BE/modules/news/controllers"
 )
 
 type MockNewsUseCase struct {
@@ -85,10 +85,10 @@ func TestNewsHandlers(t *testing.T) {
 
 		imageTitlePart, _ := writer.CreateFormFile("image_title", "title.jpg")
 		_, _ = imageTitlePart.Write([]byte("dummy title image"))
-		
+
 		imageDescPart, _ := writer.CreateFormFile("image_desc", "desc.jpg")
 		_, _ = imageDescPart.Write([]byte("dummy desc image"))
-		
+
 		writer.Close()
 
 		expectedNews := &entities.News{
@@ -102,7 +102,7 @@ func TestNewsHandlers(t *testing.T) {
 			},
 		}
 
-		mockUseCase.On("CreateNews", 
+		mockUseCase.On("CreateNews",
 			mock.MatchedBy(func(n *entities.News) bool {
 				return n.Title == "Test News" && len(n.Dialog) == 1
 			}),
@@ -139,7 +139,7 @@ func TestNewsHandlers(t *testing.T) {
 
 		req := httptest.NewRequest("GET", "/news", nil)
 		resp, err := app.Test(req, -1)
-		
+
 		assert.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 	})
@@ -196,7 +196,7 @@ func TestNewsHandlers(t *testing.T) {
 
 		req := httptest.NewRequest("DELETE", "/news/"+id, nil)
 		resp, err := app.Test(req, -1)
-		
+
 		assert.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 	})
@@ -214,7 +214,7 @@ func TestNewsHandlers(t *testing.T) {
 
 		req := httptest.NewRequest("GET", "/news/"+id, nil)
 		resp, err := app.Test(req, -1)
-		
+
 		assert.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 	})
@@ -225,7 +225,7 @@ func TestNewsHandlers(t *testing.T) {
 
 		req := httptest.NewRequest("GET", "/news/next-id", nil)
 		resp, err := app.Test(req, -1)
-		
+
 		assert.NoError(t, err)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 	})

@@ -37,7 +37,7 @@ func (c *FavController) CreateFavHandler(ctx *fiber.Ctx) error {
 	}
 
 	fav.UserID = userID
-	if fav.NursingHouseID == ""{
+	if fav.NursingHouseID == "" {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
 			"status":      fiber.ErrBadRequest.Message,
 			"status_code": fiber.ErrBadRequest.Code,
@@ -73,14 +73,14 @@ func (c *FavController) GetFavByUserIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	favs, err := c.favusecase.GetFavByUserID(userID) 
+	favs, err := c.favusecase.GetFavByUserID(userID)
 	if err != nil {
-    	return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-        	"status":      "Internal Server Error",
-        	"status_code": fiber.StatusInternalServerError,
-        	"message":     err.Error(),
-        	"result":      nil,
-    	})
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":      "Internal Server Error",
+			"status_code": fiber.StatusInternalServerError,
+			"message":     err.Error(),
+			"result":      nil,
+		})
 	}
 
 	if len(favs) == 0 {
@@ -159,7 +159,7 @@ func (c *FavController) DeleteFavByIDHandler(ctx *fiber.Ctx) error {
 				"result":      nil,
 			})
 		}
-		
+
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":      "Internal Server Error",
 			"status_code": fiber.StatusInternalServerError,

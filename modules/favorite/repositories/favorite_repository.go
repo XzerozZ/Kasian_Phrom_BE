@@ -1,15 +1,16 @@
 package repositories
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
+
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 
 	"gorm.io/gorm"
 )
 
 type GormFavRepository struct {
-  	db *gorm.DB
+	db *gorm.DB
 }
 
 func NewGormFavRepository(db *gorm.DB) *GormFavRepository {
@@ -56,7 +57,7 @@ func (r *GormFavRepository) CheckFav(userID string, nursingHouseID string) error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf("not favorited nursing house")
 		}
-		
+
 		return err
 	}
 

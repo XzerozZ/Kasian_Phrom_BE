@@ -3,13 +3,14 @@ package repositories
 import (
 	"fmt"
 	"strconv"
+
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 
 	"gorm.io/gorm"
 )
 
 type GormNewsRepository struct {
-  	db *gorm.DB
+	db *gorm.DB
 }
 
 func NewGormNewsRepository(db *gorm.DB) *GormNewsRepository {
@@ -34,13 +35,13 @@ func (r *GormNewsRepository) CreateNews(news *entities.News) (*entities.News, er
 	return r.GetNewsByID(news.ID)
 }
 
-func(r *GormNewsRepository) GetAllNews() ([]entities.News, error){
+func (r *GormNewsRepository) GetAllNews() ([]entities.News, error) {
 	var news []entities.News
 	if err := r.db.Find(&news).Error; err != nil {
 		return nil, err
 	}
 
-	return news , nil
+	return news, nil
 }
 
 func (r *GormNewsRepository) GetNewsByID(id string) (*entities.News, error) {
@@ -48,8 +49,8 @@ func (r *GormNewsRepository) GetNewsByID(id string) (*entities.News, error) {
 	if err := r.db.Preload("Dialog").First(&news, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
-	
-	return &news , nil
+
+	return &news, nil
 }
 
 func (r *GormNewsRepository) GetNewsNextID() (string, error) {
@@ -57,7 +58,7 @@ func (r *GormNewsRepository) GetNewsNextID() (string, error) {
 	if err := r.db.Model(&entities.News{}).Select("COALESCE(MAX(CAST(id AS INT)), 0)").Scan(&maxID).Error; err != nil {
 		return "", err
 	}
-	
+
 	maxIDInt := 0
 	if maxID != "" {
 		maxIDInt, _ = strconv.Atoi(maxID)
@@ -80,5 +81,5 @@ func (r *GormNewsRepository) DeleteDialog(id string) error {
 }
 
 func (r *GormNewsRepository) DeleteNewsByID(id string) error {
-    return r.db.Where("id = ?", id).Delete(&entities.News{}).Error
+	return r.db.Where("id = ?", id).Delete(&entities.News{}).Error
 }

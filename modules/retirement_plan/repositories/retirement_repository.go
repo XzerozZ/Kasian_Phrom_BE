@@ -3,13 +3,14 @@ package repositories
 import (
 	"fmt"
 	"strconv"
+
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 
 	"gorm.io/gorm"
 )
 
 type GormRetirementRepository struct {
-  	db *gorm.DB
+	db *gorm.DB
 }
 
 func NewGormRetirementRepository(db *gorm.DB) *GormRetirementRepository {
@@ -45,7 +46,7 @@ func (r *GormRetirementRepository) GetRetirementNextID() (string, error) {
 	if err := r.db.Model(&entities.RetirementPlan{}).Select("COALESCE(MAX(CAST(id AS INT)), 0)").Scan(&maxID).Error; err != nil {
 		return "", err
 	}
-	
+
 	maxIDInt := 0
 	if maxID != "" {
 		maxIDInt, _ = strconv.Atoi(maxID)
@@ -57,9 +58,9 @@ func (r *GormRetirementRepository) GetRetirementNextID() (string, error) {
 }
 
 func (r *GormRetirementRepository) UpdateRetirementPlan(retirement *entities.RetirementPlan) (*entities.RetirementPlan, error) {
-    if err := r.db.Save(&retirement).Error; err != nil {
-        return nil, err
-    }
+	if err := r.db.Save(&retirement).Error; err != nil {
+		return nil, err
+	}
 
-    return r.GetRetirementByID(retirement.ID)
+	return r.GetRetirementByID(retirement.ID)
 }

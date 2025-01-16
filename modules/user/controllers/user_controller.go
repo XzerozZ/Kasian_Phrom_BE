@@ -2,15 +2,16 @@ package controllers
 
 import (
 	"mime/multipart"
-	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
+
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type UserController struct {
-	userusecase	usecases.UserUseCase
+	userusecase usecases.UserUseCase
 }
 
 func NewUserController(userusecase usecases.UserUseCase) *UserController {
@@ -27,10 +28,10 @@ func (c *UserController) RegisterHandler(ctx *fiber.Ctx) error {
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrBadRequest.Message,
-			"status_code": 	fiber.ErrBadRequest.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
@@ -79,18 +80,18 @@ func (c *UserController) RegisterHandler(ctx *fiber.Ctx) error {
 	data, err := c.userusecase.Register(user, req.RoleName)
 	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrInternalServerError.Message,
-			"status_code": 	fiber.ErrInternalServerError.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"status":		"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"Nursing house created successfully",
-		"result":      	data,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Nursing house created successfully",
+		"result":      data,
 	})
 }
 
@@ -102,10 +103,10 @@ func (c *UserController) LoginHandler(ctx *fiber.Ctx) error {
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrInternalServerError.Message,
-			"status_code": 	fiber.ErrInternalServerError.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
@@ -130,22 +131,22 @@ func (c *UserController) LoginHandler(ctx *fiber.Ctx) error {
 	token, user, err := c.userusecase.Login(req.Email, req.Password)
 	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrInternalServerError.Message,
-			"status_code": 	fiber.ErrInternalServerError.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message": 		"Login successful",
-		"result":     	fiber.Map{
-			"token":       token,
-			"u_id":        user.ID,
-			"uname":	   user.Username,
-			"role":        user.Role.RoleName,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Login successful",
+		"result": fiber.Map{
+			"token": token,
+			"u_id":  user.ID,
+			"uname": user.Username,
+			"role":  user.Role.RoleName,
 		},
 	})
 }
@@ -158,10 +159,10 @@ func (c *UserController) LoginAdminHandler(ctx *fiber.Ctx) error {
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrInternalServerError.Message,
-			"status_code": 	fiber.ErrInternalServerError.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
@@ -186,22 +187,22 @@ func (c *UserController) LoginAdminHandler(ctx *fiber.Ctx) error {
 	token, user, err := c.userusecase.LoginAdmin(req.Email, req.Password)
 	if err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrInternalServerError.Message,
-			"status_code": 	fiber.ErrInternalServerError.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message": 		"Login successful",
-		"result":     	fiber.Map{
-			"token":       token,
-			"u_id":        user.ID,
-			"uname":	   user.Username,
-			"role":        user.Role.RoleName,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Login successful",
+		"result": fiber.Map{
+			"token": token,
+			"u_id":  user.ID,
+			"uname": user.Username,
+			"role":  user.Role.RoleName,
 		},
 	})
 }
@@ -229,7 +230,7 @@ func (c *UserController) ResetPasswordHandler(ctx *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
-	
+
 	userID, ok := ctx.Locals("user_id").(string)
 	if !ok || userID == "" {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -265,10 +266,10 @@ func (c *UserController) ForgotPasswordHandler(ctx *fiber.Ctx) error {
 	var req ForgotPasswordRequest
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrInternalServerError.Message,
-			"status_code": 	fiber.ErrInternalServerError.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
@@ -307,10 +308,10 @@ func (c *UserController) VerifyOTPHandler(ctx *fiber.Ctx) error {
 	var req OTPRequest
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrInternalServerError.Message,
-			"status_code": 	fiber.ErrInternalServerError.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
@@ -372,18 +373,18 @@ func (c *UserController) GetUserByIDHandler(ctx *fiber.Ctx) error {
 	data, err := c.userusecase.GetUserByID(userID)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"Nursing house retrieved successfully",
-		"result":      	data,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Nursing house retrieved successfully",
+		"result":      data,
 	})
 }
 
@@ -409,20 +410,29 @@ func (c *UserController) GetSelectedHouseHandler(ctx *fiber.Ctx) error {
 	}
 
 	data, err := c.userusecase.GetUserByID(userID)
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
 	monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpenses(data)
-    if err != nil {
-        return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-            "status":      fiber.ErrInternalServerError.Message,
-            "status_code": fiber.ErrInternalServerError.Code,
-            "message":     err.Error(),
-            "result":      nil,
-        })
-    }
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
 
 	response := fiber.Map{
-        "selected": selectedHouse,
-        "monthly_expenses": monthlyExpenses,
-    }
+		"selected":         selectedHouse,
+		"monthly_expenses": monthlyExpenses,
+	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
@@ -446,25 +456,24 @@ func (c *UserController) UpdateUserByIDHandler(ctx *fiber.Ctx) error {
 	var user entities.User
 	if err := ctx.BodyParser(&user); err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	form, err := ctx.MultipartForm()
-    if err != nil {
-        return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "status":      "Error",
-            "status_code": fiber.StatusBadRequest,
-            "message":     "Failed to parse form data",
-            "result":      nil,
-        })
-    }
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Failed to parse form data",
+			"result":      nil,
+		})
+	}
 
-	
-    var file *multipart.FileHeader
+	var file *multipart.FileHeader
 	files := form.File["images"]
 	if len(files) > 0 {
 		file = files[0]
@@ -473,18 +482,18 @@ func (c *UserController) UpdateUserByIDHandler(ctx *fiber.Ctx) error {
 	updatedUser, err := c.userusecase.UpdateUserByID(userID, user, file, ctx)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"User retrieved successfully",
-		"result":      	updatedUser,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "User retrieved successfully",
+		"result":      updatedUser,
 	})
 }
 
@@ -512,18 +521,18 @@ func (c *UserController) UpdateSelectedHouseHandler(ctx *fiber.Ctx) error {
 	updatedHouse, err := c.userusecase.UpdateSelectedHouse(userID, nursingHouseID)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"House Updated to user successfully",
-		"result": 		updatedHouse,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "House Updated to user successfully",
+		"result":      updatedHouse,
 	})
 }
 
@@ -541,17 +550,17 @@ func (c *UserController) GetRetirementPlanHandler(ctx *fiber.Ctx) error {
 	requiredFunds, err := c.userusecase.CalculateRetirement(userID)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"This is user's retirement plan successfully",
-		"result":		requiredFunds,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "This is user's retirement plan successfully",
+		"result":      requiredFunds,
 	})
 }

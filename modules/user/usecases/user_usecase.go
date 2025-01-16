@@ -1,20 +1,21 @@
 package usecases
 
 import (
-	"os"
-	"time"
 	"errors"
 	"mime/multipart"
-	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
-	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
-	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
-	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
-	retirementRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
+	"os"
+	"time"
 
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	retirementRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserUseCase interface {
@@ -25,27 +26,27 @@ type UserUseCase interface {
 	GetUserByID(userID string) (*entities.User, error)
 	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
 	UpdateUserByID(id string, user entities.User, files *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
-	UpdateSelectedHouse(userID, nursingHouseID string)  (*entities.SelectedHouse, error)
+	UpdateSelectedHouse(userID, nursingHouseID string) (*entities.SelectedHouse, error)
 	ForgotPassword(email string) error
 	VerifyOTP(email, otpCode string) error
 	CalculateRetirement(userID string) (fiber.Map, error)
 }
 
 type UserUseCaseImpl struct {
-	userrepo 		repositories.UserRepository
-	retirementrepo 	retirementRepo.RetirementRepository
-	jwtSecret		string
-	supa			configs.Supabase
-	mail			configs.Mail
+	userrepo       repositories.UserRepository
+	retirementrepo retirementRepo.RetirementRepository
+	jwtSecret      string
+	supa           configs.Supabase
+	mail           configs.Mail
 }
 
 func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirementRepo.RetirementRepository, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) *UserUseCaseImpl {
 	return &UserUseCaseImpl{
-		userrepo: 		userrepo,
+		userrepo:       userrepo,
 		retirementrepo: retirementrepo,
-		jwtSecret:		jwt.Secret,
-		supa:  			supa,
-		mail:			mail,
+		jwtSecret:      jwt.Secret,
+		supa:           supa,
+		mail:           mail,
 	}
 }
 
@@ -95,10 +96,9 @@ func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.
 	if err != nil {
 		return "", nil, err
 	}
-	
+
 	return tokenString, &user, nil
 }
-
 
 func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User, error) {
 	user, err := u.userrepo.FindUserByEmail(email)
@@ -119,7 +119,7 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 	if err != nil {
 		return "", nil, err
 	}
-	
+
 	return tokenString, &user, nil
 }
 
@@ -189,9 +189,9 @@ func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *mu
 	}
 
 	updatedUser, err := u.userrepo.UpdateUserByID(existingUser)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
 	return updatedUser, nil
 }
@@ -204,9 +204,9 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 
 	selectedHouse.NursingHouseID = nursingHouseID
 	updatedHouse, err := u.userrepo.UpdateSelectedHouse(selectedHouse)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
 	return updatedHouse, nil
 }
@@ -219,9 +219,9 @@ func (u *UserUseCaseImpl) ForgotPassword(email string) error {
 
 	userID := user.ID
 	otpCode, err := utils.GenerateRandomOTP(6, true)
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
 	expiresAt := time.Now().Add(5 * time.Minute)
 	otp, err := u.userrepo.GetOTPByUserID(userID)
@@ -241,9 +241,9 @@ func (u *UserUseCaseImpl) ForgotPassword(email string) error {
 		return err
 	}
 
-    if err := utils.SendMail("./assets/OTPMail.html", user, otpCode, u.mail); err != nil {
-        return err
-    }
+	if err := utils.SendMail("./assets/OTPMail.html", user, otpCode, u.mail); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -293,19 +293,19 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 			return fiber.Map{}, err
 		}
 	}
-	
+
 	monthsUntilRetirement := (plan.RetirementAge * 12) - plan.AgeInMonths
 	monthlyPlan := utils.MonthlyExpensesPlan{
-		ExpectedMonthlyExpenses:      	plan.ExpectedMonthlyExpenses,
-		AnnualExpenseIncrease: 			plan.AnnualExpenseIncrease,
-		ExpectedInflation:    			plan.ExpectedInflation,
-		Age:                  			plan.Age,
-		RetirementAge:        			plan.RetirementAge,
-		ExpectLifespan:       			plan.ExpectLifespan,
-		MonthsUntilRetirement: 			monthsUntilRetirement,
-		YearUntilLifeSpan:				plan.ExpectLifespan - plan.RetirementAge,
-		AllCostAsset:           		allCostAsset,
-		NursingHousePrice:    			nursingHousePrice,
+		ExpectedMonthlyExpenses: plan.ExpectedMonthlyExpenses,
+		AnnualExpenseIncrease:   plan.AnnualExpenseIncrease,
+		ExpectedInflation:       plan.ExpectedInflation,
+		Age:                     plan.Age,
+		RetirementAge:           plan.RetirementAge,
+		ExpectLifespan:          plan.ExpectLifespan,
+		MonthsUntilRetirement:   monthsUntilRetirement,
+		YearUntilLifeSpan:       plan.ExpectLifespan - plan.RetirementAge,
+		AllCostAsset:            allCostAsset,
+		NursingHousePrice:       nursingHousePrice,
 	}
 
 	requiredFunds, err := utils.CalculateMonthlySavings(monthlyPlan)
@@ -318,26 +318,26 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		return fiber.Map{}, err
 	}
 
-	assetSavings, err :=  utils.CalculateAllAssetSavings(user)
+	assetSavings, err := utils.CalculateAllAssetSavings(user)
 	if err != nil {
 		return fiber.Map{}, err
 	}
-	
+
 	yearUntilLifespan := plan.ExpectLifespan - plan.RetirementAge
-	totalNursingHouseCost := float64(user.House.NursingHouse.Price * yearUntilLifespan) - user.House.CurrentMoney
+	totalNursingHouseCost := float64(user.House.NursingHouse.Price*yearUntilLifespan) - user.House.CurrentMoney
 	allRequiredFund := requiredAllFunds + allCostAsset + totalNursingHouseCost
-	allSaving:= plan.CurrentSavings + assetSavings + user.House.CurrentMoney
+	allSaving := plan.CurrentSavings + assetSavings + user.House.CurrentMoney
 	allMoney := allSaving + plan.CurrentTotalInvestment
-	stillNeed := allRequiredFund - allMoney 
+	stillNeed := allRequiredFund - allMoney
 	response := fiber.Map{
-		"allRequiredFund":				allRequiredFund,
-		"stillneed":					stillNeed,
-		"allretirementfund": 			requiredAllFunds,
-        "monthly_expenses": 			requiredFunds,
-		"all_money": 					float64(allMoney),
-		"saving": 						float64(allSaving),
-		"investment": 					float64(plan.CurrentTotalInvestment),
-    }
+		"allRequiredFund":   allRequiredFund,
+		"stillneed":         stillNeed,
+		"allretirementfund": requiredAllFunds,
+		"monthly_expenses":  requiredFunds,
+		"all_money":         float64(allMoney),
+		"saving":            float64(allSaving),
+		"investment":        float64(plan.CurrentTotalInvestment),
+	}
 
 	return response, nil
 }

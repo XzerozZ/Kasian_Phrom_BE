@@ -2,44 +2,45 @@ package servers
 
 import (
 	"log"
+
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
-	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/database"
-	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/middlewares"
-	nhControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/controllers"
-	nhRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
-	nhUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/usecases"
-	userControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/controllers"
-	userRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
-	userUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
-	newsControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/controllers"
-	newsRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/repositories"
-	newsUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
-	favControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/controllers"
-	favRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/repositories"
-	favUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/usecases"
 	assetControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/controllers"
 	assetRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/repositories"
 	assetUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/usecases"
+	favControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/controllers"
+	favRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/repositories"
+	favUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/usecases"
+	newsControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/controllers"
+	newsRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/repositories"
+	newsUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
+	nhControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/controllers"
+	nhRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
+	nhUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/usecases"
 	retirementControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/controllers"
 	retirementRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 	retirementUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/usecases"
+	userControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/controllers"
+	userRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
+	userUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/database"
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/middlewares"
 
-	"gorm.io/gorm"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"gorm.io/gorm"
 )
 
-func SetupRoutes(app *fiber.App, jwt configs.JWT ,supa configs.Supabase, mail configs.Mail) {
+func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) {
 	db := database.GetDB()
 	if db == nil {
 		log.Fatal("Failed to initialize database")
 	}
 
 	app.Use(cors.New(cors.Config{
-        AllowOrigins: "http://localhost:3000",
-        AllowMethods: "GET, POST, PUT, DELETE",
-        AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-    }))
+		AllowOrigins: "http://localhost:3000",
+		AllowMethods: "GET, POST, PUT, DELETE",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+	}))
 
 	setupNursingHouseRoutes(app, db, supa)
 	SetupNewsRoutes(app, db, supa)
@@ -64,7 +65,7 @@ func SetupNewsRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
 	newsGroup := app.Group("/news")
 	newsGroup.Post("/", newsController.CreateNewsHandler)
 	newsGroup.Get("/", newsController.GetAllNewsHandler)
-	newsGroup.Get("/id" , newsController.GetNewsNextIDHandler)
+	newsGroup.Get("/id", newsController.GetNewsNextIDHandler)
 	newsGroup.Get("/:id", newsController.GetNewsByIDHandler)
 	newsGroup.Put("/:id", newsController.UpdateNewsByIDHandler)
 	newsGroup.Delete("/:id", newsController.DeleteNewsByIDHandler)
@@ -103,7 +104,7 @@ func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase)
 	nhGroup.Get("/", nhController.GetAllNhHandler)
 	nhGroup.Get("/active", nhController.GetAllActiveNhHandler)
 	nhGroup.Get("/inactive", nhController.GetAllInactiveNhHandler)
-	nhGroup.Get("/id" , nhController.GetNhNextIDHandler)
+	nhGroup.Get("/id", nhController.GetNhNextIDHandler)
 	nhGroup.Get("/:id", nhController.GetNhByIDHandler)
 	nhGroup.Put("/:id", nhController.UpdateNhByIDHandler)
 }
