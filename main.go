@@ -16,6 +16,7 @@ func main() {
 	app := fiber.New(fiber.Config{
 		BodyLimit: math.MaxInt64,
 	})
+	
 	servers.SetupRoutes(app, config.JWT, config.Supabase)
 	serverAddress := config.App.Host + ":" + config.App.Port
 	log.Printf("Server is running on %s", serverAddress)

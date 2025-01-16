@@ -28,6 +28,7 @@ func InitDB(config configs.PostgreSQL) {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
+
 	err = db.AutoMigrate(
         &entities.NursingHouse{},
 		&entities.Role{},
@@ -35,10 +36,13 @@ func InitDB(config configs.PostgreSQL) {
 		&entities.Image{},
 		&entities.News{},
 		&entities.Dialog{},
-		&entities.Financial{},
+		&entities.Favorite{},
 		&entities.Asset{},
 		&entities.RetirementPlan{},
+		&entities.SelectedHouse{},
+		&entities.OTP{},
     )
+
 	insertRoles()
 	log.Println("Database connection established successfully!")
 }
@@ -61,6 +65,7 @@ func insertRoles() {
 			if err := db.Create(&adminRole).Error; err != nil {
 				log.Fatalf("Failed to insert Admin role: %v", err)
 			}
+
 			log.Println("Admin role created successfully!")
 		} else {
 			log.Fatalf("Error checking Admin role: %v", err)
@@ -73,6 +78,7 @@ func insertRoles() {
 			if err := db.Create(&userRole).Error; err != nil {
 				log.Fatalf("Failed to insert User role: %v", err)
 			}
+			
 			log.Println("User role created successfully!")
 		} else {
 			log.Fatalf("Error checking User role: %v", err)

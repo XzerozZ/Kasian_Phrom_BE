@@ -3,6 +3,7 @@ package usecases
 import (
 	"mime/multipart"
 	"os"
+	"errors"
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
@@ -40,16 +41,12 @@ func (u *NhUseCaseImpl) CreateNh(nursingHouse entities.NursingHouse, files []mul
 		return nil, err
 	}
 
-	if nursingHouse.Price <= 0 {
-		return nil, ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "message": "price must be greater than zero",
-        })
+	if nursingHouse.Price < 0 {
+		return nil, errors.New("price must be greater than zero")
     }
 
 	if len(files) == 0 {
-		return nil, ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "message": "at least one image is required",
-        })
+		return nil, errors.New("at least one image is required")
 	}
 
 	nursingHouse.ID = id
@@ -76,8 +73,7 @@ func (u *NhUseCaseImpl) CreateNh(nursingHouse entities.NursingHouse, files []mul
         })
     }
 
-	var createdNh *entities.NursingHouse
-	createdNh, err = u.nhrepo.CreateNh(&nursingHouse, images)
+	createdNh, err := u.nhrepo.CreateNh(&nursingHouse, images)
     if err != nil {
         return nil, err
     }
@@ -106,10 +102,8 @@ func (u *NhUseCaseImpl) GetNhNextID() (string, error) {
 }
 
 func (u *NhUseCaseImpl) UpdateNhByID(id string, nursingHouse entities.NursingHouse, files []multipart.FileHeader, imagesToDelete []string, ctx *fiber.Ctx) (*entities.NursingHouse, error) {
-	if nursingHouse.Price <= 0 {
-		return nil, ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "message": "price must be greater than zero",
-        })
+	if nursingHouse.Price < 0 {
+		return nil, errors.New("price must be greater than zero")
     }
 
 	existingNh, err := u.nhrepo.GetNhByID(id)

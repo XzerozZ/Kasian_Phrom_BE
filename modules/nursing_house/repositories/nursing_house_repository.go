@@ -56,7 +56,7 @@ func (r *GormNhRepository) CreateNh(nursingHouse *entities.NursingHouse, images 
 
 func (r *GormNhRepository) GetAllNh() ([]entities.NursingHouse, error) {
 	var nursingHouses []entities.NursingHouse
-	if err := r.db.Preload("Images").Find(&nursingHouses).Error; err != nil {
+	if err := r.db.Preload("Images").Where("id != ?", "00001").Find(&nursingHouses).Error; err != nil {
 		return nil, err
 	}
 
@@ -65,7 +65,7 @@ func (r *GormNhRepository) GetAllNh() ([]entities.NursingHouse, error) {
 
 func (r *GormNhRepository) GetActiveNh() ([]entities.NursingHouse, error) {
 	var nursingHouses []entities.NursingHouse
-	if err := r.db.Preload("Images").Where("status = ?", "Active").Find(&nursingHouses).Error; err != nil {
+	if err := r.db.Preload("Images").Where("status = ? AND id != ?", "Active", "00001").Find(&nursingHouses).Error; err != nil {
 		return nil, err
 	}
 
@@ -74,7 +74,7 @@ func (r *GormNhRepository) GetActiveNh() ([]entities.NursingHouse, error) {
 
 func (r *GormNhRepository) GetInactiveNh() ([]entities.NursingHouse, error) {
 	var nursingHouses []entities.NursingHouse
-	if err := r.db.Preload("Images").Where("status = ?", "Inactive").Find(&nursingHouses).Error; err != nil {
+	if err := r.db.Preload("Images").Where("status = ? AND id != ?", "Inactive", "00001").Find(&nursingHouses).Error; err != nil {
 		return nil, err
 	}
 
