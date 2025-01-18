@@ -29,6 +29,7 @@ type UserUseCase interface {
 	UpdateSelectedHouse(userID, nursingHouseID string) (*entities.SelectedHouse, error)
 	ForgotPassword(email string) error
 	VerifyOTP(email, otpCode string) error
+	ChangedPassword(email, newPassword string) error
 	CalculateRetirement(userID string) (fiber.Map, error)
 }
 
@@ -268,6 +269,30 @@ func (u *UserUseCaseImpl) VerifyOTP(email, otpCode string) error {
 	}
 
 	if err := u.userrepo.DeleteOTP(user.ID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *UserUseCaseImpl) ChangedPassword(email, newPassword string) error {
+	user, err := u.userrepo.FindUserByEmail(email)
+	if err != nil {
+		return err
+	}
+
+	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(newPassword)); err == nil {
+		return errors.New("new password cannot be the same as the old password")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.Password = string(hashedPassword)
+	_, err = u.userrepo.UpdateUserByID(&user)
+	if err != nil {
 		return err
 	}
 

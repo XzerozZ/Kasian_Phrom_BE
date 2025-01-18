@@ -59,6 +59,11 @@ func (m *MockUserUseCase) VerifyOTP(email, otp string) error {
 	return args.Error(0)
 }
 
+func (m *MockUserUseCase) ChangedPassword(userID, newPassword string) error {
+	args := m.Called(userID, newPassword)
+	return args.Error(0)
+}
+
 func (m *MockUserUseCase) GetUserByID(id string) (*entities.User, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
@@ -106,7 +111,7 @@ func setupApp(controller *controllers.UserController) *fiber.App {
 	app.Post("/admin/login", controller.LoginAdminHandler)
 	app.Post("/forgot-password", controller.ForgotPasswordHandler)
 	app.Post("/verify-otp", controller.VerifyOTPHandler)
-	app.Post("/reset-password", controller.ResetPasswordHandler)
+	app.Post("/resetpassword", controller.ResetPasswordHandler)
 	app.Post("/logout", controller.LogoutHandler)
 	app.Get("/users/:id", controller.GetUserByIDHandler)
 	app.Get("/selected-house", controller.GetSelectedHouseHandler)
