@@ -4,7 +4,7 @@ import "time"
 
 type NursingHouse struct {
 	ID           string  `json:"nh_id" gorm:"primaryKey"`
-	Name         string  `json:"name"`
+	Name         string  `json:"name" gorm:"unique" `
 	Province     string  `json:"province"`
 	Address      string  `json:"address"`
 	Price        int     `json:"price" gorm:"not null"`
