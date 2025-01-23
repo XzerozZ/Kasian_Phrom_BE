@@ -3,15 +3,13 @@ services:
     image: postgres:latest
     container_name: SE
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:${DB_PORT}"
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: SE
     volumes:
       - ./data:/var/lib/postgresql/data
-    networks:
-      - app-network
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -24,9 +22,14 @@ services:
     restart: always
     depends_on:
       - postgres
-    networks:
-      - app-network
 
-networks:
-  app-network:
-    driver: bridge
+  server:
+    container_name: kasian_phrom_server
+    build: 
+      context: .
+      dockerfile: dockerfile
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    env_file: 
+      - .env
+    restart: on-failure

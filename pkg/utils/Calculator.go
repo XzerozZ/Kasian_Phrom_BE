@@ -21,7 +21,6 @@ type MonthlyExpensesPlan struct {
 }
 
 func CalculateRetirementFunds(plan MonthlyExpensesPlan) (float64, error) {
-	// Validate inputs
 	if plan.ExpectedMonthlyExpenses <= 0 || plan.AnnualExpenseIncrease < 0 || plan.ExpectedInflation < 0 {
 		return 0, errors.New("expected monthly expenses, annual expense increase, and inflation must be greater than zero")
 	}
