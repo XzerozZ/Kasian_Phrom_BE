@@ -319,7 +319,7 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		}
 	}
 
-	monthsUntilRetirement := (plan.RetirementAge * 12) - plan.AgeInMonths
+	yearsUntilRetirement := plan.RetirementAge - plan.Age
 	monthlyPlan := utils.MonthlyExpensesPlan{
 		ExpectedMonthlyExpenses: plan.ExpectedMonthlyExpenses,
 		AnnualExpenseIncrease:   plan.AnnualExpenseIncrease,
@@ -327,8 +327,7 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		Age:                     plan.Age,
 		RetirementAge:           plan.RetirementAge,
 		ExpectLifespan:          plan.ExpectLifespan,
-		MonthsUntilRetirement:   monthsUntilRetirement,
-		YearUntilLifeSpan:       plan.ExpectLifespan - plan.RetirementAge,
+		YearsUntilRetirement:    yearsUntilRetirement,
 		AllCostAsset:            allCostAsset,
 		NursingHousePrice:       nursingHousePrice,
 	}
