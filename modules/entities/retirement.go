@@ -4,8 +4,6 @@ type RetirementPlan struct {
 	ID                      string  `json:"financial_id" gorm:"primaryKey"`
 	PlanName                string  `json:"planName" gorm:"not null"`
 	BirthDate               string  `json:"birth_date" gorm:"not null"`
-	Age                     int     `json:"age"`
-	AgeInMonths             int     `json:"-"`
 	RetirementAge           int     `json:"retirement_age" gorm:"not null"`
 	ExpectLifespan          int     `json:"expect_lifespan" gorm:"not null"`
 	CurrentSavings          float64 `json:"current_savings " gorm:"not null"`

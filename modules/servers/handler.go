@@ -95,7 +95,7 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 	userGroup.Get("/", middlewares.JWTMiddleware(jwt), userController.GetUserByIDHandler)
 	userGroup.Get("/plan", middlewares.JWTMiddleware(jwt), userController.GetRetirementPlanHandler)
 	userGroup.Get("/selected", middlewares.JWTMiddleware(jwt), userController.GetSelectedHouseHandler)
-	userGroup.Put("/", middlewares.JWTMiddleware(jwt), userController.UpdateUserByIDHandler)
+	userGroup.Put("/user", middlewares.JWTMiddleware(jwt), userController.UpdateUserByIDHandler)
 	userGroup.Put("/:nh_id", middlewares.JWTMiddleware(jwt), userController.UpdateSelectedHouseHandler)
 }
 
@@ -121,7 +121,7 @@ func setupFavoriteRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 
 	favGroup := app.Group("/favorite")
 	favGroup.Post("/", middlewares.JWTMiddleware(jwt), favController.CreateFavHandler)
-	favGroup.Get("/", middlewares.JWTMiddleware(jwt), favController.GetFavByUserIDHandler)
+	favGroup.Get("/user", middlewares.JWTMiddleware(jwt), favController.GetFavByUserIDHandler)
 	favGroup.Get("/:nh_id", middlewares.JWTMiddleware(jwt), favController.CheckFavHandler)
 	favGroup.Delete("/:nh_id", middlewares.JWTMiddleware(jwt), favController.DeleteFavByIDHandler)
 }
@@ -146,6 +146,7 @@ func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 
 	retirementGroup := app.Group("/retirement")
 	retirementGroup.Post("/", middlewares.JWTMiddleware(jwt), retirementController.CreateRetirementHandler)
+	retirementGroup.Get("/", middlewares.JWTMiddleware(jwt), retirementController.GetRetirementByUserIDHandler)
 }
 
 func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
@@ -157,5 +158,6 @@ func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	loanGroup.Post("/", middlewares.JWTMiddleware(jwt), loanController.CreateLoanHandler)
 	loanGroup.Get("/:id", loanController.GetLoanByIDHandler)
 	loanGroup.Get("/", middlewares.JWTMiddleware(jwt), loanController.GetLoanByUserIDHandler)
+	loanGroup.Put("/:id/status", middlewares.JWTMiddleware(jwt), loanController.UpdateLoanStatusByIDHandler)
 	loanGroup.Delete("/:id", loanController.DeleteLoanHandler)
 }

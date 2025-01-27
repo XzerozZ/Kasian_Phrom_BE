@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"strconv"
+	"time"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 )
@@ -18,6 +19,23 @@ type MonthlyExpensesPlan struct {
 	YearsUntilRetirement    int
 	AllCostAsset            float64
 	NursingHousePrice       float64
+}
+
+func CalculateAge(birthDateStr string) (int, error) {
+	layout := "02-01-2006"
+	birthDate, err := time.Parse(layout, birthDateStr)
+	if err != nil {
+		return 0, errors.New("invalid BirthDate format, expected DD-MM-YYYY")
+	}
+
+	now := time.Now()
+	years := now.Year() - birthDate.Year()
+
+	if now.Month() < birthDate.Month() || (now.Month() == birthDate.Month() && now.Day() < birthDate.Day()) {
+		years--
+	}
+
+	return years, nil
 }
 
 func CalculateRetirementFunds(plan MonthlyExpensesPlan) (float64, error) {
@@ -37,14 +55,13 @@ func CalculateRetirementFunds(plan MonthlyExpensesPlan) (float64, error) {
 
 	totalRequiredFunds := 0.0
 	annualExpenses := plan.ExpectedMonthlyExpenses * 12
-	firstYearFactor := math.Pow(1+(plan.ExpectedInflation/100), float64(1+yearsUntilRetirement))
-	totalRequiredFunds += annualExpenses * firstYearFactor
-	for year := 2; year <= yearsInRetirement; year++ {
+	for year := 1; year <= yearsInRetirement; year++ {
 		remainingYears := yearsUntilRetirement + year
 		compoundingFactor := math.Pow(1+(plan.ExpectedInflation/100), float64(remainingYears))
 		totalRequiredFunds += annualExpenses * compoundingFactor
 	}
 
+	totalRequiredFunds = math.Round(totalRequiredFunds)
 	return totalRequiredFunds, nil
 }
 
@@ -59,7 +76,9 @@ func CalculateMonthlySavings(plan MonthlyExpensesPlan) (float64, error) {
 		return 0, errors.New("years until retirement must be greater than zero")
 	}
 
-	monthlySavings := requiredFunds/float64(monthsUntilRetirement) + plan.AllCostAsset + plan.NursingHousePrice
+	funds := requiredFunds / float64(monthsUntilRetirement)
+	funds = math.Round(funds)
+	monthlySavings := funds + plan.AllCostAsset + plan.NursingHousePrice
 	return monthlySavings, nil
 }
 
@@ -80,7 +99,9 @@ func CalculateMonthlyExpenses(asset *entities.Asset) (float64, error) {
 		return 0, errors.New("current money cannot exceed total cost")
 	}
 
-	return remainingCost / float64(remainingMonths), nil
+	monthlyExpenses := remainingCost / float64(remainingMonths)
+	monthlyExpenses = math.Round(monthlyExpenses)
+	return monthlyExpenses, nil
 }
 
 func CalculateAllAssetsMonthlyExpenses(user *entities.User) (float64, error) {
@@ -94,6 +115,7 @@ func CalculateAllAssetsMonthlyExpenses(user *entities.User) (float64, error) {
 		total += monthlyExpense
 	}
 
+	total = math.Round(total)
 	return total, nil
 }
 
@@ -101,7 +123,9 @@ func CalculateNursingHouseMonthlyExpenses(user *entities.User) (float64, error) 
 	monthsUntilRetirement := user.RetirementPlan.RetirementAge * 12
 	yearUntilLifespan := user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge
 	totalNursingHouseCost := user.House.NursingHouse.Price * yearUntilLifespan
-	return float64(totalNursingHouseCost) / float64(monthsUntilRetirement), nil
+	cost := float64(totalNursingHouseCost) / float64(monthsUntilRetirement)
+	cost = math.Round(cost)
+	return cost, nil
 }
 
 func CalculateAllAssetSavings(user *entities.User) (float64, error) {
@@ -110,6 +134,7 @@ func CalculateAllAssetSavings(user *entities.User) (float64, error) {
 		total += asset.CurrentMoney
 	}
 
+	total = math.Round(total)
 	return total, nil
 }
 
@@ -120,5 +145,6 @@ func CalculateAllLoan(loans []entities.Loan) (float64, error) {
 		total += totalLoan
 	}
 
+	total = math.Round(total)
 	return total, nil
 }

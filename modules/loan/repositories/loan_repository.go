@@ -21,6 +21,7 @@ type LoanRepository interface {
 	GetLoanByID(id string) (*entities.Loan, error)
 	GetLoanByUserID(userID string) ([]entities.Loan, error)
 	GetLoanNextID() (string, error)
+	UpdateLoanByID(loan *entities.Loan) (*entities.Loan, error)
 	DeleteLoanByID(id string) error
 }
 
@@ -64,6 +65,14 @@ func (r *GormLoanRepository) GetLoanByUserID(userID string) ([]entities.Loan, er
 	}
 
 	return loans, nil
+}
+
+func (r *GormLoanRepository) UpdateLoanByID(loan *entities.Loan) (*entities.Loan, error) {
+	if err := r.db.Save(&loan).Error; err != nil {
+		return nil, err
+	}
+
+	return r.GetLoanByID(loan.ID)
 }
 
 func (r *GormLoanRepository) DeleteLoanByID(id string) error {

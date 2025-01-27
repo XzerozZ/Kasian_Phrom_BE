@@ -11,6 +11,7 @@ type LoanUseCase interface {
 	CreateLoan(loan entities.Loan) (*entities.Loan, error)
 	GetLoanByID(id string) (*entities.Loan, error)
 	GetLoanByUserID(userID string) ([]entities.Loan, error)
+	UpdateLoanStatusByID(id string, loan entities.Loan) (*entities.Loan, error)
 	DeleteLoanByID(id string) error
 }
 
@@ -41,6 +42,7 @@ func (u *LoanUseCaseImpl) CreateLoan(loan entities.Loan) (*entities.Loan, error)
 	}
 
 	loan.ID = id
+	loan.Status = "In_Progress"
 	createdLoan, err := u.loanrepo.CreateLoan(&loan)
 	if err != nil {
 		return nil, err
@@ -55,6 +57,33 @@ func (u *LoanUseCaseImpl) GetLoanByID(id string) (*entities.Loan, error) {
 
 func (u *LoanUseCaseImpl) GetLoanByUserID(userID string) ([]entities.Loan, error) {
 	return u.loanrepo.GetLoanByUserID(userID)
+}
+
+func (u *LoanUseCaseImpl) UpdateLoanStatusByID(id string, loan entities.Loan) (*entities.Loan, error) {
+	existingLoan, err := u.loanrepo.GetLoanByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	existingLoan.Installment = loan.Installment
+	if existingLoan.MonthlyExpenses > 0 {
+		if loan.Installment {
+			existingLoan.Status = "In_Progress"
+		} else {
+			existingLoan.Status = "Paused"
+		}
+	} else {
+		existingLoan.Status = "Completed"
+		existingLoan.Installment = false
+	}
+
+	updatedLoan, err := u.loanrepo.UpdateLoanByID(existingLoan)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedLoan, nil
+
 }
 
 func (u *LoanUseCaseImpl) DeleteLoanByID(id string) error {

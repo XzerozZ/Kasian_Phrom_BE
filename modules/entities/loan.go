@@ -10,7 +10,7 @@ type Loan struct {
 	InterestPercentage float64 `json:"interest_percentage" gorm:"not null"`
 	RemainingMonths    int     `json:"remaining_months" gorm:"not null"`
 	Installment        bool    `json:"installment" gorm:"not null"`
-	Status             string  `json:"status" gorm:"default:'In_Progress'"`
+	Status             string  `json:"status" gorm:"not null"`
 	UserID             string  `json:"-" gorm:"not null"`
 	CreatedAt          time.Time
 	UpdatedAt          time.Time

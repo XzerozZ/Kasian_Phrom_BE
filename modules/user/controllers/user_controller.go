@@ -431,11 +431,26 @@ func (c *UserController) GetUserByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
+	age, err := utils.CalculateAge(data.RetirementPlan.BirthDate)
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	response := fiber.Map{
+		"data": data,
+		"age":  age,
+	}
+
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
-		"message":     "Nursing house retrieved successfully",
-		"result":      data,
+		"message":     "๊User Info retrieved successfully",
+		"result":      response,
 	})
 }
 

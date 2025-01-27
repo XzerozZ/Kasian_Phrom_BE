@@ -86,14 +86,12 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 	existingAsset.Name = asset.Name
 	existingAsset.Type = asset.Type
 	existingAsset.EndYear = asset.EndYear
-
 	updatedAsset, err := u.assetrepo.UpdateAssetByID(existingAsset)
 	if err != nil {
 		return nil, err
 	}
 
 	return updatedAsset, nil
-
 }
 
 func (u *AssetUseCaseImpl) DeleteAssetByID(id string) error {

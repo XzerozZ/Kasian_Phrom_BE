@@ -311,6 +311,11 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 	}
 
 	plan := user.RetirementPlan
+	age, err := utils.CalculateAge(plan.BirthDate)
+	if err != nil {
+		return nil, err
+	}
+
 	nursingHousePrice := 0.0
 	if user.House.NursingHouse.ID != "" {
 		nursingHousePrice, err = utils.CalculateNursingHouseMonthlyExpenses(user)
@@ -319,12 +324,12 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		}
 	}
 
-	yearsUntilRetirement := plan.RetirementAge - plan.Age
+	yearsUntilRetirement := plan.RetirementAge - age
 	monthlyPlan := utils.MonthlyExpensesPlan{
 		ExpectedMonthlyExpenses: plan.ExpectedMonthlyExpenses,
 		AnnualExpenseIncrease:   plan.AnnualExpenseIncrease,
 		ExpectedInflation:       plan.ExpectedInflation,
-		Age:                     plan.Age,
+		Age:                     age,
 		RetirementAge:           plan.RetirementAge,
 		ExpectLifespan:          plan.ExpectLifespan,
 		YearsUntilRetirement:    yearsUntilRetirement,
