@@ -3,11 +3,12 @@ package database
 import (
 	"fmt"
 	"log"
+
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 
-	"gorm.io/gorm"
 	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 var db *gorm.DB
@@ -29,8 +30,8 @@ func InitDB(config configs.PostgreSQL) {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	err = db.AutoMigrate(
-        &entities.NursingHouse{},
+	_ = db.AutoMigrate(
+		&entities.NursingHouse{},
 		&entities.Role{},
 		&entities.User{},
 		&entities.Image{},
@@ -41,7 +42,8 @@ func InitDB(config configs.PostgreSQL) {
 		&entities.RetirementPlan{},
 		&entities.SelectedHouse{},
 		&entities.OTP{},
-    )
+		&entities.Loan{},
+	)
 
 	insertRoles()
 	log.Println("Database connection established successfully!")
@@ -51,7 +53,7 @@ func GetDB() *gorm.DB {
 	if db == nil {
 		log.Fatal("Database is not initialized")
 	}
-	
+
 	return db
 }
 
@@ -78,7 +80,7 @@ func insertRoles() {
 			if err := db.Create(&userRole).Error; err != nil {
 				log.Fatalf("Failed to insert User role: %v", err)
 			}
-			
+
 			log.Println("User role created successfully!")
 		} else {
 			log.Fatalf("Error checking User role: %v", err)

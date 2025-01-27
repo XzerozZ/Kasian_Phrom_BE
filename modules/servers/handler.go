@@ -10,6 +10,9 @@ import (
 	favControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/controllers"
 	favRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/repositories"
 	favUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/usecases"
+	loanControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/controllers"
+	loanRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/repositories"
+	loanUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/usecases"
 	newsControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/controllers"
 	newsRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/repositories"
 	newsUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
@@ -48,6 +51,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 	setupAssetRoutes(app, jwt, db)
 	setupUserRoutes(app, db, jwt, supa, mail)
 	setupRetirementRoutes(app, jwt, db)
+	setupLoanRoutes(app, jwt, db)
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
@@ -142,4 +146,16 @@ func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 
 	retirementGroup := app.Group("/retirement")
 	retirementGroup.Post("/", middlewares.JWTMiddleware(jwt), retirementController.CreateRetirementHandler)
+}
+
+func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
+	loanRepository := loanRepositories.NewGormLoanRepository(db)
+	loanUseCase := loanUseCases.NewLoanUseCase(loanRepository)
+	loanController := loanControllers.NewLoanController(loanUseCase)
+
+	loanGroup := app.Group("/loan")
+	loanGroup.Post("/", middlewares.JWTMiddleware(jwt), loanController.CreateLoanHandler)
+	loanGroup.Get("/:id", loanController.GetLoanByIDHandler)
+	loanGroup.Get("/", middlewares.JWTMiddleware(jwt), loanController.GetLoanByUserIDHandler)
+	loanGroup.Delete("/:id", loanController.DeleteLoanHandler)
 }

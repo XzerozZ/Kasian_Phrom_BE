@@ -14,6 +14,7 @@ type User struct {
 	Role           Role           `json:"role" gorm:"foreignKey:RoleID"`
 	Favorites      []Favorite     `json:"-" gorm:"foreignKey:UserID"`
 	Assets         []Asset        `json:"-" gorm:"foreignKey:UserID"`
+	Loans          []Loan         `json:"-" gorm:"foreignKey:UserID"`
 	House          SelectedHouse  `json:"house" gorm:"foreignKey:UserID"`
 	RetirementPlan RetirementPlan `json:"retirement" gorm:"foreignKey:UserID"`
 	CreatedAt      time.Time      `json:"created_at"`
