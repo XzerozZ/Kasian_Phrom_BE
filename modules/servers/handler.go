@@ -10,6 +10,9 @@ import (
 	favControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/controllers"
 	favRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/repositories"
 	favUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/usecases"
+	historyControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/controllers"
+	historyRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/repositories"
+	historyUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/usecases"
 	loanControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/controllers"
 	loanRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/repositories"
 	loanUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/usecases"
@@ -52,6 +55,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 	setupUserRoutes(app, db, jwt, supa, mail)
 	setupRetirementRoutes(app, jwt, db)
 	setupLoanRoutes(app, jwt, db)
+	setupHistoryRoutes(app, jwt, db)
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
@@ -160,4 +164,16 @@ func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	loanGroup.Get("/", middlewares.JWTMiddleware(jwt), loanController.GetLoanByUserIDHandler)
 	loanGroup.Put("/:id/status", middlewares.JWTMiddleware(jwt), loanController.UpdateLoanStatusByIDHandler)
 	loanGroup.Delete("/:id", loanController.DeleteLoanHandler)
+}
+
+func setupHistoryRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
+	historyRepository := historyRepositories.NewGormHistoryRepository(db)
+	userRepository := userRepositories.NewGormUserRepository(db)
+	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
+	historyUseCase := historyUseCases.NewHistoryUseCase(historyRepository, userRepository, retirementRepository, db)
+	historyController := historyControllers.NewHistoryController(historyUseCase)
+
+	retirementGroup := app.Group("/history")
+	retirementGroup.Post("/", middlewares.JWTMiddleware(jwt), historyController.CreateHistoryHandler)
+	retirementGroup.Get("/", middlewares.JWTMiddleware(jwt), historyController.GetHistoryByUserIDHandler)
 }

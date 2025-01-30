@@ -43,6 +43,7 @@ func InitDB(config configs.PostgreSQL) {
 		&entities.SelectedHouse{},
 		&entities.OTP{},
 		&entities.Loan{},
+		&entities.History{},
 	)
 
 	insertRoles()

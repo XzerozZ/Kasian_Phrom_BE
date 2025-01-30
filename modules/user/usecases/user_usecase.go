@@ -311,7 +311,7 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 	}
 
 	plan := user.RetirementPlan
-	age, err := utils.CalculateAge(plan.BirthDate)
+	age, err := utils.CalculateRetirementPlanAge(plan.BirthDate, plan.CreatedAt)
 	if err != nil {
 		return nil, err
 	}

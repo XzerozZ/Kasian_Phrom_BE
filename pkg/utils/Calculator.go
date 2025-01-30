@@ -21,6 +21,20 @@ type MonthlyExpensesPlan struct {
 	NursingHousePrice       float64
 }
 
+func CalculateRetirementPlanAge(birthDateStr string, planCreationDate time.Time) (int, error) {
+	layout := "02-01-2006"
+	birthDate, err := time.Parse(layout, birthDateStr)
+	if err != nil {
+		return 0, errors.New("invalid BirthDate format, expected DD-MM-YYYY")
+	}
+
+	years := planCreationDate.Year() - birthDate.Year()
+	if planCreationDate.YearDay() < birthDate.YearDay() {
+		years--
+	}
+	return years, nil
+}
+
 func CalculateAge(birthDateStr string) (int, error) {
 	layout := "02-01-2006"
 	birthDate, err := time.Parse(layout, birthDateStr)
