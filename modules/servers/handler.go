@@ -22,6 +22,9 @@ import (
 	nhControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/controllers"
 	nhRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 	nhUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/usecases"
+	quizControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/quiz/controllers"
+	quizRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/quiz/repositories"
+	quizUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/quiz/usecases"
 	retirementControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/controllers"
 	retirementRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 	retirementUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/usecases"
@@ -56,6 +59,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 	setupRetirementRoutes(app, jwt, db)
 	setupLoanRoutes(app, jwt, db)
 	setupHistoryRoutes(app, jwt, db)
+	setupQuizRoutes(app, jwt, db)
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
@@ -176,4 +180,14 @@ func setupHistoryRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	retirementGroup := app.Group("/history")
 	retirementGroup.Post("/", middlewares.JWTMiddleware(jwt), historyController.CreateHistoryHandler)
 	retirementGroup.Get("/", middlewares.JWTMiddleware(jwt), historyController.GetHistoryByUserIDHandler)
+}
+
+func setupQuizRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
+	quizRepository := quizRepositories.NewGormQuizRepository(db)
+	quizUseCase := quizUseCases.NewQuizUseCase(quizRepository)
+	quizController := quizControllers.NewQuizController(quizUseCase)
+
+	quizGroup := app.Group("/quiz")
+	quizGroup.Post("/", middlewares.JWTMiddleware(jwt), quizController.CreateQuizHandler)
+	quizGroup.Get("/", middlewares.JWTMiddleware(jwt), quizController.GetQuizByUserIDHandler)
 }
