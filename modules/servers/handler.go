@@ -28,6 +28,9 @@ import (
 	retirementControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/controllers"
 	retirementRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 	retirementUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/usecases"
+	transControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/controllers"
+	transRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/repositories"
+	transUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/usecases"
 	userControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/controllers"
 	userRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
 	userUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
@@ -60,6 +63,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 	setupLoanRoutes(app, jwt, db)
 	setupHistoryRoutes(app, jwt, db)
 	setupQuizRoutes(app, jwt, db)
+	setupTransactionRoutes(app, jwt, db)
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
@@ -190,4 +194,16 @@ func setupQuizRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	quizGroup := app.Group("/quiz")
 	quizGroup.Post("/", middlewares.JWTMiddleware(jwt), quizController.CreateQuizHandler)
 	quizGroup.Get("/", middlewares.JWTMiddleware(jwt), quizController.GetQuizByUserIDHandler)
+}
+
+func setupTransactionRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
+	transRepository := transRepositories.NewGormTransRepository(db)
+	loanRepository := loanRepositories.NewGormLoanRepository(db)
+	transUseCase := transUseCases.NewTransactionUseCase(transRepository, loanRepository)
+	transController := transControllers.NewTransactionController(transUseCase)
+
+	transGroup := app.Group("/transaction")
+	transGroup.Post("/all", transController.CreateTransactionsForAllUsersHandler)
+	transGroup.Get("/", middlewares.JWTMiddleware(jwt), transController.GetTransactionByUserIDHandler)
+	transGroup.Put("/:id", middlewares.JWTMiddleware(jwt), transController.MarkTransactiontoPaidHandler)
 }

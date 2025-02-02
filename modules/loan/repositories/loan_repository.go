@@ -21,6 +21,7 @@ type LoanRepository interface {
 	GetLoanByID(id string) (*entities.Loan, error)
 	GetLoanByUserID(userID string) ([]entities.Loan, error)
 	GetLoanNextID() (string, error)
+	GetAllLoansByStatus(statuses []string) ([]entities.Loan, error)
 	UpdateLoanByID(loan *entities.Loan) (*entities.Loan, error)
 	DeleteLoanByID(id string) error
 }
@@ -61,6 +62,15 @@ func (r *GormLoanRepository) GetLoanNextID() (string, error) {
 func (r *GormLoanRepository) GetLoanByUserID(userID string) ([]entities.Loan, error) {
 	var loans []entities.Loan
 	if err := r.db.Where("user_id = ?", userID).Find(&loans).Error; err != nil {
+		return nil, err
+	}
+
+	return loans, nil
+}
+
+func (r *GormLoanRepository) GetAllLoansByStatus(statuses []string) ([]entities.Loan, error) {
+	var loans []entities.Loan
+	if err := r.db.Where("status IN ?", statuses).Find(&loans).Error; err != nil {
 		return nil, err
 	}
 
