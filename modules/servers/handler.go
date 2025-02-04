@@ -90,7 +90,8 @@ func SetupNewsRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
 func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) {
 	userRepository := userRepositories.NewGormUserRepository(db)
 	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
-	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, jwt, supa, mail)
+	historyRepository := historyRepositories.NewGormHistoryRepository(db)
+	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, historyRepository, jwt, supa, mail)
 	userController := userControllers.NewUserController(userUseCase)
 
 	authGroup := app.Group("/auth")
@@ -159,6 +160,7 @@ func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	retirementGroup := app.Group("/retirement")
 	retirementGroup.Post("/", middlewares.JWTMiddleware(jwt), retirementController.CreateRetirementHandler)
 	retirementGroup.Get("/", middlewares.JWTMiddleware(jwt), retirementController.GetRetirementByUserIDHandler)
+	retirementGroup.Put("/", middlewares.JWTMiddleware(jwt), retirementController.UpdateRetirementHandler)
 }
 
 func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {

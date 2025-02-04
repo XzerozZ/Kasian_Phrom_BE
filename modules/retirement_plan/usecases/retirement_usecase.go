@@ -6,6 +6,7 @@ import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
+	"github.com/google/uuid"
 )
 
 type RetirementUseCase interface {
@@ -24,11 +25,6 @@ func NewRetirementUseCase(retirerepo repositories.RetirementRepository) *Retirem
 }
 
 func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementPlan) (*entities.RetirementPlan, int, error) {
-	id, err := u.retirerepo.GetRetirementNextID()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	age, err := utils.CalculateAge(retirement.BirthDate)
 	if err != nil {
 		return nil, 0, err
@@ -82,7 +78,7 @@ func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementP
 		return nil, 0, errors.New("retirementAge must be less than ExpectLifespan")
 	}
 
-	retirement.ID = id
+	retirement.ID = uuid.New().String()
 	createdRetire, err := u.retirerepo.CreateRetirement(&retirement)
 	if err != nil {
 		return nil, 0, err
@@ -100,13 +96,9 @@ func (u *RetirementUseCaseImpl) GetRetirementByUserID(userID string) (*entities.
 }
 
 func (u *RetirementUseCaseImpl) UpdateRetirementByID(id string, retirement entities.RetirementPlan) (*entities.RetirementPlan, error) {
-	existingRetirement, err := u.retirerepo.GetRetirementByID(id)
+	existingRetirement, err := u.retirerepo.GetRetirementByUserID(id)
 	if err != nil {
 		return nil, err
-	}
-
-	if retirement.CurrentSavings < 0 {
-		return nil, errors.New("currentSavings must be greater than or equal to zero")
 	}
 
 	if retirement.MonthlyIncome < 0 {
@@ -119,10 +111,6 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(id string, retirement entit
 
 	if retirement.CurrentSavingsReturns <= 0 {
 		return nil, errors.New("monthlyIncome must be greater than zero")
-	}
-
-	if retirement.CurrentTotalInvestment < 0 {
-		return nil, errors.New("currentTotalInvestment must be greater than zero or equal to zero")
 	}
 
 	if retirement.InvestmentReturn <= 0 {
@@ -145,11 +133,10 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(id string, retirement entit
 		return nil, errors.New("annualInvestmentReturn must be greater than or equal to zero")
 	}
 
+	existingRetirement.PlanName = retirement.PlanName
 	existingRetirement.CurrentSavings = retirement.ExpectedMonthlyExpenses
-	existingRetirement.MonthlyIncome = retirement.MonthlyIncome
 	existingRetirement.MonthlyExpenses = retirement.MonthlyExpenses
 	existingRetirement.CurrentSavingsReturns = retirement.CurrentSavingsReturns
-	existingRetirement.CurrentTotalInvestment = retirement.CurrentTotalInvestment
 	existingRetirement.InvestmentReturn = retirement.InvestmentReturn
 	existingRetirement.ExpectedInflation = retirement.ExpectedInflation
 	existingRetirement.AnnualExpenseIncrease = retirement.AnnualExpenseIncrease

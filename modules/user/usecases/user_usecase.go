@@ -8,6 +8,7 @@ import (
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	historyRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/repositories"
 	retirementRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
@@ -36,15 +37,17 @@ type UserUseCase interface {
 type UserUseCaseImpl struct {
 	userrepo       repositories.UserRepository
 	retirementrepo retirementRepo.RetirementRepository
+	historyrepo    historyRepo.HistoryRepository
 	jwtSecret      string
 	supa           configs.Supabase
 	mail           configs.Mail
 }
 
-func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirementRepo.RetirementRepository, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) *UserUseCaseImpl {
+func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirementRepo.RetirementRepository, historyrepo historyRepo.HistoryRepository, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) *UserUseCaseImpl {
 	return &UserUseCaseImpl{
 		userrepo:       userrepo,
 		retirementrepo: retirementrepo,
+		historyrepo:    historyrepo,
 		jwtSecret:      jwt.Secret,
 		supa:           supa,
 		mail:           mail,
@@ -352,6 +355,20 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		return fiber.Map{}, err
 	}
 
+	currentMonthStart := time.Now().Truncate(24*time.Hour).AddDate(0, 0, -time.Now().Day()+1)
+	currentMonthEnd := currentMonthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
+
+	deposits, err := u.historyrepo.GetUserDepositsInRange(userID, currentMonthStart, currentMonthEnd)
+	if err != nil {
+		return fiber.Map{}, err
+	}
+
+	totalDeposits := 0.0
+	for _, history := range deposits {
+		totalDeposits += history.Money
+	}
+
+	adjustedMonthlyExpenses := requiredFunds - totalDeposits
 	yearUntilLifespan := plan.ExpectLifespan - plan.RetirementAge
 	totalNursingHouseCost := float64(user.House.NursingHouse.Price*yearUntilLifespan) - user.House.CurrentMoney
 	allRequiredFund := requiredAllFunds + allCostAsset + totalNursingHouseCost
@@ -362,7 +379,7 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		"allRequiredFund":   allRequiredFund,
 		"stillneed":         stillNeed,
 		"allretirementfund": requiredAllFunds,
-		"monthly_expenses":  requiredFunds,
+		"monthly_expenses":  adjustedMonthlyExpenses,
 		"all_money":         float64(allMoney),
 		"saving":            float64(allSaving),
 		"investment":        float64(plan.CurrentTotalInvestment),
