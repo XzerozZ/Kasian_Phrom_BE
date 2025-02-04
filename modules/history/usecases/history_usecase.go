@@ -120,6 +120,7 @@ func (u *HistoryUseCaseImpl) GetHistoryByUserID(userID string) (fiber.Map, error
 		"data":  data,
 		"total": total,
 	}
+
 	return response, nil
 }
 
