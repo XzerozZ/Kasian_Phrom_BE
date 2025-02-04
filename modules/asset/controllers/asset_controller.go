@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
-	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/usecases"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -26,7 +26,7 @@ func (c *AssetController) CreateAssetHandler(ctx *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
-	
+
 	var asset entities.Asset
 	if err := ctx.BodyParser(&asset); err != nil {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
@@ -78,19 +78,19 @@ func (c *AssetController) GetAssetByIDHandler(ctx *fiber.Ctx) error {
 	}
 
 	monthlyExpenses, err := utils.CalculateMonthlyExpenses(data)
-    if err != nil {
-        return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-            "status":      fiber.ErrInternalServerError.Message,
-            "status_code": fiber.ErrInternalServerError.Code,
-            "message":     err.Error(),
-            "result":      nil,
-        })
-    }
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
 
 	response := fiber.Map{
-        "asset": data,
-        "monthly_expenses": monthlyExpenses,
-    }
+		"asset":            data,
+		"monthly_expenses": monthlyExpenses,
+	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
@@ -131,24 +131,24 @@ func (c *AssetController) GetAssetByUserIDHandler(ctx *fiber.Ctx) error {
 	}
 
 	var assetsWithExpenses []fiber.Map
-    for _, asset := range assets {
-        monthlyExpenses, err := utils.CalculateMonthlyExpenses(&asset)
-        if err != nil {
-            return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-                "status":      fiber.ErrInternalServerError.Message,
-                "status_code": fiber.ErrInternalServerError.Code,
-                "message":     err.Error(),
-                "result":      nil,
-            })
-        }
+	for _, asset := range assets {
+		monthlyExpenses, err := utils.CalculateMonthlyExpenses(&asset)
+		if err != nil {
+			return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+				"status":      fiber.ErrInternalServerError.Message,
+				"status_code": fiber.ErrInternalServerError.Code,
+				"message":     err.Error(),
+				"result":      nil,
+			})
+		}
 
-        assetResponse := fiber.Map{
-            "asset":            asset,
-            "monthly_expenses": monthlyExpenses,
-        }
+		assetResponse := fiber.Map{
+			"asset":            asset,
+			"monthly_expenses": monthlyExpenses,
+		}
 
-        assetsWithExpenses = append(assetsWithExpenses, assetResponse)
-    }
+		assetsWithExpenses = append(assetsWithExpenses, assetResponse)
+	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
@@ -174,10 +174,10 @@ func (c *AssetController) UpdateAssetByIDHandler(ctx *fiber.Ctx) error {
 	asset.UserID = userID
 	if err := ctx.BodyParser(&asset); err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
@@ -189,42 +189,40 @@ func (c *AssetController) UpdateAssetByIDHandler(ctx *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
-	
+
 	updatedAsset, err := c.assetusecase.UpdateAssetByID(id, asset)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      	fiber.ErrNotFound.Message,
-			"status_code": 	fiber.ErrNotFound.Code,
-			"message":     	err.Error(),
-			"result":      	nil,
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status":      	"Success",
-		"status_code": 	fiber.StatusOK,
-		"message":     	"Asset update successfully",
-		"result":      	updatedAsset,
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Asset update successfully",
+		"result":      updatedAsset,
 	})
 }
 
-
 func (c *AssetController) DeleteAssetByIDHandler(ctx *fiber.Ctx) error {
-    id := ctx.Params("id")
-    err := c.assetusecase.DeleteAssetByID(id)
-    if err != nil {
-        return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "status":      "Error",
-            "status_code": fiber.StatusInternalServerError,
-            "message":     err.Error(),
-            "result":      nil,
-        })
-    }
+	id := ctx.Params("id")
+	if err := c.assetusecase.DeleteAssetByID(id); err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusInternalServerError,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
 
-    return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-        "status":      "Success",
-        "status_code": fiber.StatusOK,
-        "message":     "Asset deleted successfully",
-        "result":      nil,
-    })
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Asset deleted successfully",
+		"result":      nil,
+	})
 }

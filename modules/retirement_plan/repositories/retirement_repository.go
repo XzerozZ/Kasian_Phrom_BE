@@ -20,6 +20,7 @@ func NewGormRetirementRepository(db *gorm.DB) *GormRetirementRepository {
 type RetirementRepository interface {
 	CreateRetirement(retirement *entities.RetirementPlan) (*entities.RetirementPlan, error)
 	GetRetirementByID(id string) (*entities.RetirementPlan, error)
+	GetRetirementByUserID(userID string) (*entities.RetirementPlan, error)
 	GetRetirementNextID() (string, error)
 	UpdateRetirementPlan(retirement *entities.RetirementPlan) (*entities.RetirementPlan, error)
 }
@@ -35,6 +36,15 @@ func (r *GormRetirementRepository) CreateRetirement(retirement *entities.Retirem
 func (r *GormRetirementRepository) GetRetirementByID(id string) (*entities.RetirementPlan, error) {
 	var retirement entities.RetirementPlan
 	if err := r.db.First(&retirement, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+
+	return &retirement, nil
+}
+
+func (r *GormRetirementRepository) GetRetirementByUserID(userID string) (*entities.RetirementPlan, error) {
+	var retirement entities.RetirementPlan
+	if err := r.db.Where("user_id = ?", userID).Find(&retirement).Error; err != nil {
 		return nil, err
 	}
 

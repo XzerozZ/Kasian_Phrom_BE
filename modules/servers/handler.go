@@ -10,15 +10,27 @@ import (
 	favControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/controllers"
 	favRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/repositories"
 	favUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/usecases"
+	historyControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/controllers"
+	historyRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/repositories"
+	historyUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/usecases"
+	loanControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/controllers"
+	loanRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/repositories"
+	loanUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/usecases"
 	newsControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/controllers"
 	newsRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/repositories"
 	newsUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
 	nhControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/controllers"
 	nhRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 	nhUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/usecases"
+	quizControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/quiz/controllers"
+	quizRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/quiz/repositories"
+	quizUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/quiz/usecases"
 	retirementControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/controllers"
 	retirementRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 	retirementUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/usecases"
+	transControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/controllers"
+	transRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/repositories"
+	transUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/usecases"
 	userControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/controllers"
 	userRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
 	userUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
@@ -48,6 +60,10 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 	setupAssetRoutes(app, jwt, db)
 	setupUserRoutes(app, db, jwt, supa, mail)
 	setupRetirementRoutes(app, jwt, db)
+	setupLoanRoutes(app, jwt, db)
+	setupHistoryRoutes(app, jwt, db)
+	setupQuizRoutes(app, jwt, db)
+	setupTransactionRoutes(app, jwt, db)
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
@@ -91,7 +107,7 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 	userGroup.Get("/", middlewares.JWTMiddleware(jwt), userController.GetUserByIDHandler)
 	userGroup.Get("/plan", middlewares.JWTMiddleware(jwt), userController.GetRetirementPlanHandler)
 	userGroup.Get("/selected", middlewares.JWTMiddleware(jwt), userController.GetSelectedHouseHandler)
-	userGroup.Put("/", middlewares.JWTMiddleware(jwt), userController.UpdateUserByIDHandler)
+	userGroup.Put("/user", middlewares.JWTMiddleware(jwt), userController.UpdateUserByIDHandler)
 	userGroup.Put("/:nh_id", middlewares.JWTMiddleware(jwt), userController.UpdateSelectedHouseHandler)
 }
 
@@ -117,7 +133,7 @@ func setupFavoriteRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 
 	favGroup := app.Group("/favorite")
 	favGroup.Post("/", middlewares.JWTMiddleware(jwt), favController.CreateFavHandler)
-	favGroup.Get("/", middlewares.JWTMiddleware(jwt), favController.GetFavByUserIDHandler)
+	favGroup.Get("/user", middlewares.JWTMiddleware(jwt), favController.GetFavByUserIDHandler)
 	favGroup.Get("/:nh_id", middlewares.JWTMiddleware(jwt), favController.CheckFavHandler)
 	favGroup.Delete("/:nh_id", middlewares.JWTMiddleware(jwt), favController.DeleteFavByIDHandler)
 }
@@ -142,4 +158,54 @@ func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 
 	retirementGroup := app.Group("/retirement")
 	retirementGroup.Post("/", middlewares.JWTMiddleware(jwt), retirementController.CreateRetirementHandler)
+	retirementGroup.Get("/", middlewares.JWTMiddleware(jwt), retirementController.GetRetirementByUserIDHandler)
+}
+
+func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
+	loanRepository := loanRepositories.NewGormLoanRepository(db)
+	transRepository := transRepositories.NewGormTransRepository(db)
+	loanUseCase := loanUseCases.NewLoanUseCase(loanRepository, transRepository)
+	transUseCase := transUseCases.NewTransactionUseCase(transRepository, loanRepository)
+	loanController := loanControllers.NewLoanController(loanUseCase, transUseCase)
+
+	loanGroup := app.Group("/loan")
+	loanGroup.Post("/", middlewares.JWTMiddleware(jwt), loanController.CreateLoanHandler)
+	loanGroup.Get("/:id", loanController.GetLoanByIDHandler)
+	loanGroup.Get("/", middlewares.JWTMiddleware(jwt), loanController.GetLoanByUserIDHandler)
+	loanGroup.Put("/:id/status", middlewares.JWTMiddleware(jwt), loanController.UpdateLoanStatusByIDHandler)
+	loanGroup.Delete("/:id", loanController.DeleteLoanHandler)
+}
+
+func setupHistoryRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
+	historyRepository := historyRepositories.NewGormHistoryRepository(db)
+	userRepository := userRepositories.NewGormUserRepository(db)
+	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
+	historyUseCase := historyUseCases.NewHistoryUseCase(historyRepository, userRepository, retirementRepository, db)
+	historyController := historyControllers.NewHistoryController(historyUseCase)
+
+	retirementGroup := app.Group("/history")
+	retirementGroup.Post("/", middlewares.JWTMiddleware(jwt), historyController.CreateHistoryHandler)
+	retirementGroup.Get("/", middlewares.JWTMiddleware(jwt), historyController.GetHistoryByUserIDHandler)
+}
+
+func setupQuizRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
+	quizRepository := quizRepositories.NewGormQuizRepository(db)
+	quizUseCase := quizUseCases.NewQuizUseCase(quizRepository)
+	quizController := quizControllers.NewQuizController(quizUseCase)
+
+	quizGroup := app.Group("/quiz")
+	quizGroup.Post("/", middlewares.JWTMiddleware(jwt), quizController.CreateQuizHandler)
+	quizGroup.Get("/", middlewares.JWTMiddleware(jwt), quizController.GetQuizByUserIDHandler)
+}
+
+func setupTransactionRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
+	transRepository := transRepositories.NewGormTransRepository(db)
+	loanRepository := loanRepositories.NewGormLoanRepository(db)
+	transUseCase := transUseCases.NewTransactionUseCase(transRepository, loanRepository)
+	transController := transControllers.NewTransactionController(transUseCase)
+
+	transGroup := app.Group("/transaction")
+	transGroup.Post("/all", transController.CreateTransactionsForAllUsersHandler)
+	transGroup.Get("/", middlewares.JWTMiddleware(jwt), transController.GetTransactionByUserIDHandler)
+	transGroup.Put("/:id", middlewares.JWTMiddleware(jwt), transController.MarkTransactiontoPaidHandler)
 }
