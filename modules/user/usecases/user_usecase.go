@@ -357,7 +357,6 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 
 	currentMonthStart := time.Now().Truncate(24*time.Hour).AddDate(0, 0, -time.Now().Day()+1)
 	currentMonthEnd := currentMonthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
-
 	deposits, err := u.historyrepo.GetUserDepositsInRange(userID, currentMonthStart, currentMonthEnd)
 	if err != nil {
 		return fiber.Map{}, err

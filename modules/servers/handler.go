@@ -188,6 +188,7 @@ func setupHistoryRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	retirementGroup := app.Group("/history")
 	retirementGroup.Post("/", middlewares.JWTMiddleware(jwt), historyController.CreateHistoryHandler)
 	retirementGroup.Get("/", middlewares.JWTMiddleware(jwt), historyController.GetHistoryByUserIDHandler)
+	retirementGroup.Get("/summary", middlewares.JWTMiddleware(jwt), historyController.GetSummaryHistoryByUserIDHandler)
 }
 
 func setupQuizRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
