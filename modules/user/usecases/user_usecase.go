@@ -23,7 +23,7 @@ type UserUseCase interface {
 	Register(user *entities.User, roleName string) (*entities.User, error)
 	Login(email, password string) (string, *entities.User, error)
 	LoginAdmin(email, password string) (string, *entities.User, error)
-	LoginWithGoogle(user entities.User) (string, *entities.User, error)
+	LoginWithGoogle(user *entities.User) (string, *entities.User, error)
 	ResetPassword(userID, oldPassword, newPassword string) error
 	GetUserByID(userID string) (*entities.User, error)
 	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
@@ -56,6 +56,10 @@ func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirem
 }
 
 func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entities.User, error) {
+	if _, err := u.userrepo.FindUserByEmail(user.Email); err == nil {
+		return nil, errors.New("this email already have account")
+	}
+
 	role, err := u.userrepo.GetRoleByName(roleName)
 	if err != nil {
 		return nil, errors.New("role not found")
@@ -64,6 +68,7 @@ func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entit
 	user.ID = uuid.New().String()
 	user.RoleID = role.ID
 	user.Role = role
+	user.Provider = "Credentials"
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -111,6 +116,10 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 		return "", nil, errors.New("invalid email")
 	}
 
+	if user.Provider != "Credentials" {
+		return "", nil, errors.New("this email is already registered with another authentication method")
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return "", nil, errors.New("invalid password")
 	}
@@ -128,9 +137,13 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 	return tokenString, &user, nil
 }
 
-func (u *UserUseCaseImpl) LoginWithGoogle(user entities.User) (string, *entities.User, error) {
+func (u *UserUseCaseImpl) LoginWithGoogle(user *entities.User) (string, *entities.User, error) {
 	account, err := u.userrepo.FindUserByEmail(user.Email)
-	if err != nil {
+	if err == nil {
+		if account.Provider != "Google" {
+			return "", nil, errors.New("this email is already registered with another authentication method")
+		}
+	} else {
 		role, err := u.userrepo.GetRoleByName("User")
 		if err != nil {
 			return "", nil, errors.New("role not found")
@@ -140,8 +153,8 @@ func (u *UserUseCaseImpl) LoginWithGoogle(user entities.User) (string, *entities
 		user.RoleID = role.ID
 		user.Role = role
 		user.Provider = "Google"
-		_, err = u.userrepo.CreateUser(&user)
-		if err != nil {
+
+		if _, err := u.userrepo.CreateUser(user); err != nil {
 			return "", nil, err
 		}
 	}

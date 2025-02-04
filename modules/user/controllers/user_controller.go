@@ -207,6 +207,64 @@ func (c *UserController) LoginAdminHandler(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *UserController) LoginWithGoogleHandler(ctx *fiber.Ctx) error {
+	var req struct {
+		Firstname string `json:"fname"`
+		Lastname  string `json:"lname"`
+		Username  string `json:"uname"`
+		Email     string `json:"email"`
+		ImageLink string `json:"image_link"`
+	}
+
+	if err := ctx.BodyParser(&req); err != nil {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	if req.Firstname == "" || req.Lastname == "" || req.Username == "" || req.Email == "" || req.ImageLink == "" {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Firstname, Lastname, Username, Email or ImageLink is missing",
+			"result":      nil,
+		})
+	}
+
+	user := &entities.User{
+		Firstname: req.Firstname,
+		Lastname:  req.Lastname,
+		Username:  req.Username,
+		Email:     req.Email,
+		ImageLink: req.ImageLink,
+	}
+
+	token, user, err := c.userusecase.LoginWithGoogle(user)
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Login successful",
+		"result": fiber.Map{
+			"token": token,
+			"u_id":  user.ID,
+			"uname": user.Username,
+			"role":  user.Role.RoleName,
+		},
+	})
+}
+
 func (c *UserController) ResetPasswordHandler(ctx *fiber.Ctx) error {
 	var req struct {
 		OldPassword string `json:"old_password"`

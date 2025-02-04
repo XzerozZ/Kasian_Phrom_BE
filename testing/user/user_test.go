@@ -44,7 +44,7 @@ func (m *MockUserUseCase) LoginAdmin(email, password string) (string, *entities.
 	return args.String(0), args.Get(1).(*entities.User), args.Error(2)
 }
 
-func (m *MockUserUseCase) LoginWithGoogle(user entities.User) (string, *entities.User, error) {
+func (m *MockUserUseCase) LoginWithGoogle(user *entities.User) (string, *entities.User, error) {
 	args := m.Called(user)
 	if args.Get(0) == nil {
 		return "", nil, args.Error(2)
