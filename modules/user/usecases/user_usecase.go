@@ -23,6 +23,7 @@ type UserUseCase interface {
 	Register(user *entities.User, roleName string) (*entities.User, error)
 	Login(email, password string) (string, *entities.User, error)
 	LoginAdmin(email, password string) (string, *entities.User, error)
+	LoginWithGoogle(user entities.User) (string, *entities.User, error)
 	ResetPassword(userID, oldPassword, newPassword string) error
 	GetUserByID(userID string) (*entities.User, error)
 	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
@@ -125,6 +126,37 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 	}
 
 	return tokenString, &user, nil
+}
+
+func (u *UserUseCaseImpl) LoginWithGoogle(user entities.User) (string, *entities.User, error) {
+	account, err := u.userrepo.FindUserByEmail(user.Email)
+	if err != nil {
+		role, err := u.userrepo.GetRoleByName("User")
+		if err != nil {
+			return "", nil, errors.New("role not found")
+		}
+
+		user.ID = uuid.New().String()
+		user.RoleID = role.ID
+		user.Role = role
+		user.Provider = "Google"
+		_, err = u.userrepo.CreateUser(&user)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": account.ID,
+		"role":    account.Role.RoleName,
+	})
+
+	tokenString, err := token.SignedString([]byte(u.jwtSecret))
+	if err != nil {
+		return "", nil, err
+	}
+
+	return tokenString, &account, nil
 }
 
 func (u *UserUseCaseImpl) ResetPassword(userID, oldPassword, newPassword string) error {

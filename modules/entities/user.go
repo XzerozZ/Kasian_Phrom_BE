@@ -9,6 +9,7 @@ type User struct {
 	Username       string         `json:"uname" gorm:"not null"`
 	Email          string         `json:"email" gorm:"unique;not null"`
 	Password       string         `json:"-"`
+	Provider       string         `json:"provider" gorm:"not null"`
 	ImageLink      string         `json:"image_link"`
 	RoleID         int            `json:"-" gorm:"not null"`
 	Role           Role           `json:"role" gorm:"foreignKey:RoleID"`
