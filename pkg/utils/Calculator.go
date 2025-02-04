@@ -151,14 +151,3 @@ func CalculateAllAssetSavings(user *entities.User) (float64, error) {
 	total = math.Round(total)
 	return total, nil
 }
-
-func CalculateAllLoan(loans []entities.Loan) (float64, error) {
-	var total float64
-	for _, loan := range loans {
-		totalLoan := loan.MonthlyExpenses * float64(loan.RemainingMonths)
-		total += totalLoan
-	}
-
-	total = math.Round(total)
-	return total, nil
-}

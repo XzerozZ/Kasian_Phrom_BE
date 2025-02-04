@@ -13,7 +13,7 @@ import (
 type TransactionUseCase interface {
 	CreateTransactionsForAllUsers() error
 	MarkTransactiontoPaid(id string) error
-	GetTransactionByUserID(userID string) ([]entities.Transaction, error)
+	GetTransactionByUserID(userID string) ([]map[string]interface{}, error)
 }
 
 type TransactionUseCaseImpl struct {
@@ -62,6 +62,15 @@ func (u *TransactionUseCaseImpl) CreateTransactionsForAllUsers() error {
 	}
 
 	for _, loan := range loans {
+		existingTransactions, err := u.transrepo.CountTransactionsByLoanID(loan.ID)
+		if err != nil {
+			return err
+		}
+
+		if existingTransactions >= loan.RemainingMonths {
+			continue
+		}
+
 		transactionStatus := "ชำระ"
 		if loan.Status == "paused" {
 			transactionStatus = "หยุดพัก"
@@ -70,17 +79,14 @@ func (u *TransactionUseCaseImpl) CreateTransactionsForAllUsers() error {
 		}
 
 		transaction := &entities.Transaction{
-			ID:              uuid.New().String(),
-			Status:          transactionStatus,
-			Type:            loan.Type,
-			MonthlyExpenses: loan.MonthlyExpenses,
-			UserID:          loan.UserID,
-			LoanID:          loan.ID,
-			CreatedAt:       time.Now(),
+			ID:        uuid.New().String(),
+			Status:    transactionStatus,
+			UserID:    loan.UserID,
+			LoanID:    loan.ID,
+			CreatedAt: time.Now(),
 		}
 
-		err := u.transrepo.CreateTransaction(transaction)
-		if err != nil {
+		if err := u.transrepo.CreateTransaction(transaction); err != nil {
 			return err
 		}
 
@@ -95,7 +101,7 @@ func (u *TransactionUseCaseImpl) MarkTransactiontoPaid(id string) error {
 		return err
 	}
 
-	if transaction.Status != "ชำระ" {
+	if transaction.Status == "หยุดพัก" {
 		return errors.New("transaction is not in a payable state")
 	}
 
@@ -123,6 +129,6 @@ func (u *TransactionUseCaseImpl) MarkTransactiontoPaid(id string) error {
 	return nil
 }
 
-func (u *TransactionUseCaseImpl) GetTransactionByUserID(userID string) ([]entities.Transaction, error) {
+func (u *TransactionUseCaseImpl) GetTransactionByUserID(userID string) ([]map[string]interface{}, error) {
 	return u.transrepo.GetTransactionByUserID(userID)
 }

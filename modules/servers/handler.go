@@ -163,8 +163,10 @@ func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 
 func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	loanRepository := loanRepositories.NewGormLoanRepository(db)
-	loanUseCase := loanUseCases.NewLoanUseCase(loanRepository)
-	loanController := loanControllers.NewLoanController(loanUseCase)
+	transRepository := transRepositories.NewGormTransRepository(db)
+	loanUseCase := loanUseCases.NewLoanUseCase(loanRepository, transRepository)
+	transUseCase := transUseCases.NewTransactionUseCase(transRepository, loanRepository)
+	loanController := loanControllers.NewLoanController(loanUseCase, transUseCase)
 
 	loanGroup := app.Group("/loan")
 	loanGroup.Post("/", middlewares.JWTMiddleware(jwt), loanController.CreateLoanHandler)

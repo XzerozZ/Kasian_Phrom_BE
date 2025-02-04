@@ -3,16 +3,20 @@ package controller
 import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/usecases"
-	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
+	transUsecases "github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/usecases"
 	"github.com/gofiber/fiber/v2"
 )
 
 type LoanController struct {
-	loanusecase usecases.LoanUseCase
+	loanusecase  usecases.LoanUseCase
+	transusecase transUsecases.TransactionUseCase
 }
 
-func NewLoanController(loanusecase usecases.LoanUseCase) *LoanController {
-	return &LoanController{loanusecase: loanusecase}
+func NewLoanController(loanusecase usecases.LoanUseCase, transusecase transUsecases.TransactionUseCase) *LoanController {
+	return &LoanController{
+		loanusecase:  loanusecase,
+		transusecase: transusecase,
+	}
 }
 
 func (c *LoanController) CreateLoanHandler(ctx *fiber.Ctx) error {
@@ -109,31 +113,16 @@ func (c *LoanController) GetLoanByUserIDHandler(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"status":      "Not Found",
 			"status_code": fiber.StatusNotFound,
-			"message":     "No Asset found for this user",
+			"message":     "No Loan found for this user",
 			"result":      nil,
 		})
-	}
-
-	totalLoans, err := utils.CalculateAllLoan(loans)
-	if err != nil {
-		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      fiber.ErrInternalServerError.Message,
-			"status_code": fiber.ErrInternalServerError.Code,
-			"message":     err.Error(),
-			"result":      nil,
-		})
-	}
-
-	response := fiber.Map{
-		"loan":   totalLoans,
-		"number": len(loans),
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "Loans retrieved successfully",
-		"result":      response,
+		"result":      loans,
 	})
 }
 
