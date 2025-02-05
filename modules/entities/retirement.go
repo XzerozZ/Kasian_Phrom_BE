@@ -19,7 +19,7 @@ type RetirementPlan struct {
 	AnnualExpenseIncrease   float64   `json:"annual_expense_increase" gorm:"not null"`
 	AnnualSavingsReturn     float64   `json:"annual_savings_return" gorm:"not null"`
 	AnnualInvestmentReturn  float64   `json:"annual_investment_return" gorm:"not null"`
-	UserID                  string    `json:"user_id" gorm:"foreignKey:UserID"`
+	UserID                  string    `json:"user_id" gorm:"unique;foreignKey:UserID"`
 	CreatedAt               time.Time `json:"created_at"`
 	UpdatedAt               time.Time `json:"updated_at"`
 }

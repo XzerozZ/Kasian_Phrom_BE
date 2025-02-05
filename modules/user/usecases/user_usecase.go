@@ -23,6 +23,7 @@ type UserUseCase interface {
 	Register(user *entities.User, roleName string) (*entities.User, error)
 	Login(email, password string) (string, *entities.User, error)
 	LoginAdmin(email, password string) (string, *entities.User, error)
+	LoginWithGoogle(user *entities.User) (string, *entities.User, error)
 	ResetPassword(userID, oldPassword, newPassword string) error
 	GetUserByID(userID string) (*entities.User, error)
 	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
@@ -55,6 +56,16 @@ func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirem
 }
 
 func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entities.User, error) {
+	normalizedEmail, err := utils.NormalizeEmail(user.Email)
+	if err != nil {
+		return nil, errors.New("invalid email format")
+	}
+
+	user.Email = normalizedEmail
+	if _, err := u.userrepo.FindUserByEmail(user.Email); err == nil {
+		return nil, errors.New("this email already have account")
+	}
+
 	role, err := u.userrepo.GetRoleByName(roleName)
 	if err != nil {
 		return nil, errors.New("role not found")
@@ -63,6 +74,7 @@ func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entit
 	user.ID = uuid.New().String()
 	user.RoleID = role.ID
 	user.Role = role
+	user.Provider = "Credentials"
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -78,6 +90,12 @@ func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entit
 }
 
 func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.User, error) {
+	normalizedEmail, err := utils.NormalizeEmail(email)
+	if err != nil {
+		return "", nil, errors.New("invalid email format")
+	}
+
+	email = normalizedEmail
 	user, err := u.userrepo.FindUserByEmail(email)
 	if err != nil {
 		return "", nil, errors.New("invalid email")
@@ -105,9 +123,19 @@ func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.
 }
 
 func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User, error) {
+	normalizedEmail, err := utils.NormalizeEmail(email)
+	if err != nil {
+		return "", nil, errors.New("invalid email format")
+	}
+
+	email = normalizedEmail
 	user, err := u.userrepo.FindUserByEmail(email)
 	if err != nil {
 		return "", nil, errors.New("invalid email")
+	}
+
+	if user.Provider != "Credentials" {
+		return "", nil, errors.New("this email is already registered with another authentication method")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
@@ -125,6 +153,47 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 	}
 
 	return tokenString, &user, nil
+}
+
+func (u *UserUseCaseImpl) LoginWithGoogle(user *entities.User) (string, *entities.User, error) {
+	normalizedEmail, err := utils.NormalizeEmail(user.Email)
+	if err != nil {
+		return "", nil, errors.New("invalid email format")
+	}
+
+	user.Email = normalizedEmail
+	account, err := u.userrepo.FindUserByEmail(user.Email)
+	if err == nil {
+		if account.Provider != "Google" {
+			return "", nil, errors.New("this email is already registered with another authentication method")
+		}
+	} else {
+		role, err := u.userrepo.GetRoleByName("User")
+		if err != nil {
+			return "", nil, errors.New("role not found")
+		}
+
+		user.ID = uuid.New().String()
+		user.RoleID = role.ID
+		user.Role = role
+		user.Provider = "Google"
+
+		if _, err := u.userrepo.CreateUser(user); err != nil {
+			return "", nil, err
+		}
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": account.ID,
+		"role":    account.Role.RoleName,
+	})
+
+	tokenString, err := token.SignedString([]byte(u.jwtSecret))
+	if err != nil {
+		return "", nil, err
+	}
+
+	return tokenString, &account, nil
 }
 
 func (u *UserUseCaseImpl) ResetPassword(userID, oldPassword, newPassword string) error {
@@ -169,10 +238,15 @@ func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *mu
 		return nil, err
 	}
 
+	normalizedEmail, err := utils.NormalizeEmail(user.Email)
+	if err != nil {
+		return nil, errors.New("invalid email format")
+	}
+
+	existingUser.Email = normalizedEmail
 	existingUser.Firstname = user.Firstname
 	existingUser.Lastname = user.Lastname
 	existingUser.Username = user.Username
-	existingUser.Email = user.Email
 	if file != nil {
 		fileName := uuid.New().String() + ".jpg"
 		if err := ctx.SaveFile(file, "./uploads/"+fileName); err != nil {

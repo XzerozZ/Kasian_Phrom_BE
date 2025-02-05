@@ -70,7 +70,7 @@ func (r *GormUserRepository) FindUserByEmail(email string) (entities.User, error
 
 func (r *GormUserRepository) GetUserByID(id string) (*entities.User, error) {
 	var user entities.User
-	err := r.db.Preload("Role").Preload("Assets").Preload("RetirementPlan").Preload("House.NursingHouse").Where("id = ?", id).First(&user).Error
+	err := r.db.Preload("Quiz.Risk").Preload("Role").Preload("Assets").Preload("RetirementPlan").Preload("House.NursingHouse.Images").Where("id = ?", id).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (r *GormUserRepository) GetUserByID(id string) (*entities.User, error) {
 
 func (r *GormUserRepository) GetSelectedHouse(userID string) (*entities.SelectedHouse, error) {
 	var selectedHouse entities.SelectedHouse
-	err := r.db.Preload("NursingHouse").Where("user_id = ?", userID).First(&selectedHouse).Error
+	err := r.db.Preload("NursingHouse.Images").Where("user_id = ?", userID).First(&selectedHouse).Error
 	if err != nil {
 		return nil, err
 	}

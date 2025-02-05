@@ -2,8 +2,11 @@ package utils
 
 import (
 	"bytes"
+	"errors"
 	"strconv"
+	"strings"
 	"text/template"
+
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 
@@ -17,12 +20,12 @@ func SendMail(templatePath string, user entities.User, otp string, config config
 		return err
 	}
 
-	err = t.Execute(&body, struct { 
-		Username 	string 
-		OTP   		string 
-	}{ 
-		Username: 	user.Username, 
-		OTP:   		otp,
+	err = t.Execute(&body, struct {
+		Username string
+		OTP      string
+	}{
+		Username: user.Username,
+		OTP:      otp,
 	})
 
 	if err != nil {
@@ -45,4 +48,18 @@ func SendMail(templatePath string, user entities.User, otp string, config config
 	}
 
 	return nil
+}
+
+func NormalizeEmail(email string) (string, error) {
+	email = strings.ToLower(email)
+
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return "", errors.New("invalid Email")
+	}
+
+	localPart, domain := parts[0], parts[1]
+	localPart = strings.ReplaceAll(localPart, ".", "")
+	email = localPart + "@" + domain
+	return email, nil
 }
