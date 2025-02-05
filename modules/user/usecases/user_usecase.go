@@ -56,6 +56,12 @@ func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirem
 }
 
 func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entities.User, error) {
+	normalizedEmail, err := utils.NormalizeEmail(user.Email)
+	if err != nil {
+		return nil, errors.New("invalid email format")
+	}
+
+	user.Email = normalizedEmail
 	if _, err := u.userrepo.FindUserByEmail(user.Email); err == nil {
 		return nil, errors.New("this email already have account")
 	}
@@ -84,6 +90,12 @@ func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entit
 }
 
 func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.User, error) {
+	normalizedEmail, err := utils.NormalizeEmail(email)
+	if err != nil {
+		return "", nil, errors.New("invalid email format")
+	}
+
+	email = normalizedEmail
 	user, err := u.userrepo.FindUserByEmail(email)
 	if err != nil {
 		return "", nil, errors.New("invalid email")
@@ -111,6 +123,12 @@ func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.
 }
 
 func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User, error) {
+	normalizedEmail, err := utils.NormalizeEmail(email)
+	if err != nil {
+		return "", nil, errors.New("invalid email format")
+	}
+
+	email = normalizedEmail
 	user, err := u.userrepo.FindUserByEmail(email)
 	if err != nil {
 		return "", nil, errors.New("invalid email")
@@ -138,6 +156,12 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 }
 
 func (u *UserUseCaseImpl) LoginWithGoogle(user *entities.User) (string, *entities.User, error) {
+	normalizedEmail, err := utils.NormalizeEmail(user.Email)
+	if err != nil {
+		return "", nil, errors.New("invalid email format")
+	}
+
+	user.Email = normalizedEmail
 	account, err := u.userrepo.FindUserByEmail(user.Email)
 	if err == nil {
 		if account.Provider != "Google" {
@@ -214,10 +238,15 @@ func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *mu
 		return nil, err
 	}
 
+	normalizedEmail, err := utils.NormalizeEmail(user.Email)
+	if err != nil {
+		return nil, errors.New("invalid email format")
+	}
+
+	existingUser.Email = normalizedEmail
 	existingUser.Firstname = user.Firstname
 	existingUser.Lastname = user.Lastname
 	existingUser.Username = user.Username
-	existingUser.Email = user.Email
 	if file != nil {
 		fileName := uuid.New().String() + ".jpg"
 		if err := ctx.SaveFile(file, "./uploads/"+fileName); err != nil {
