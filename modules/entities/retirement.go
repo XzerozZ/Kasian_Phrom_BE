@@ -8,7 +8,7 @@ type RetirementPlan struct {
 	BirthDate               string    `json:"birth_date" gorm:"not null"`
 	RetirementAge           int       `json:"retirement_age" gorm:"not null"`
 	ExpectLifespan          int       `json:"expect_lifespan" gorm:"not null"`
-	CurrentSavings          float64   `json:"current_savings " gorm:"not null"`
+	CurrentSavings          float64   `json:"current_savings" gorm:"not null"`
 	CurrentSavingsReturns   float64   `json:"current_savings_returns" gorm:"not null"`
 	MonthlyIncome           float64   `json:"monthly_income" gorm:"not null"`
 	MonthlyExpenses         float64   `json:"monthly_expenses" gorm:"not null"`

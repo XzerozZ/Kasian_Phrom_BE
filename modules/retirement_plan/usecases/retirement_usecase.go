@@ -101,6 +101,11 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(id string, retirement entit
 		return nil, err
 	}
 
+	age, err := utils.CalculateAge(retirement.BirthDate)
+	if err != nil {
+		return nil, err
+	}
+
 	if retirement.MonthlyIncome < 0 {
 		return nil, errors.New("monthlyIncome must be greater than or equal to zero")
 	}
@@ -133,8 +138,18 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(id string, retirement entit
 		return nil, errors.New("annualInvestmentReturn must be greater than or equal to zero")
 	}
 
+	if age >= retirement.RetirementAge {
+		return nil, errors.New("age must be less than RetirementAge")
+	}
+
+	if retirement.RetirementAge >= retirement.ExpectLifespan {
+		return nil, errors.New("retirementAge must be less than ExpectLifespan")
+	}
+
+	existingRetirement.ExpectLifespan = retirement.ExpectLifespan
+	existingRetirement.RetirementAge = retirement.RetirementAge
 	existingRetirement.PlanName = retirement.PlanName
-	existingRetirement.CurrentSavings = retirement.ExpectedMonthlyExpenses
+	existingRetirement.ExpectedMonthlyExpenses = retirement.ExpectedMonthlyExpenses
 	existingRetirement.MonthlyExpenses = retirement.MonthlyExpenses
 	existingRetirement.CurrentSavingsReturns = retirement.CurrentSavingsReturns
 	existingRetirement.InvestmentReturn = retirement.InvestmentReturn
