@@ -101,7 +101,7 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(id string, retirement entit
 		return nil, err
 	}
 
-	age, err := utils.CalculateAge(existingRetirement.BirthDate)
+	age, err := utils.CalculateAge(retirement.BirthDate)
 	if err != nil {
 		return nil, err
 	}
@@ -146,6 +146,7 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(id string, retirement entit
 		return nil, errors.New("retirementAge must be less than ExpectLifespan")
 	}
 
+	existingRetirement.BirthDate = retirement.BirthDate
 	existingRetirement.ExpectLifespan = retirement.ExpectLifespan
 	existingRetirement.RetirementAge = retirement.RetirementAge
 	existingRetirement.PlanName = retirement.PlanName
