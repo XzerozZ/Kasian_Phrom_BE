@@ -52,7 +52,6 @@ func SendMail(templatePath string, user entities.User, otp string, config config
 
 func NormalizeEmail(email string) (string, error) {
 	email = strings.ToLower(email)
-
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 {
 		return "", errors.New("invalid Email")
