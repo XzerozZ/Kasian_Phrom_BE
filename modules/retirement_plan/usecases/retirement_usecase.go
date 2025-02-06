@@ -101,7 +101,7 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(id string, retirement entit
 		return nil, err
 	}
 
-	age, err := utils.CalculateAge(retirement.BirthDate)
+	age, err := utils.CalculateAge(existingRetirement.BirthDate)
 	if err != nil {
 		return nil, err
 	}
