@@ -150,6 +150,7 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(id string, retirement entit
 	existingRetirement.ExpectLifespan = retirement.ExpectLifespan
 	existingRetirement.RetirementAge = retirement.RetirementAge
 	existingRetirement.PlanName = retirement.PlanName
+	existingRetirement.MonthlyIncome = retirement.MonthlyIncome
 	existingRetirement.ExpectedMonthlyExpenses = retirement.ExpectedMonthlyExpenses
 	existingRetirement.MonthlyExpenses = retirement.MonthlyExpenses
 	existingRetirement.CurrentSavingsReturns = retirement.CurrentSavingsReturns
