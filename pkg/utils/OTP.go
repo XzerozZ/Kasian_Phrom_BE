@@ -1,28 +1,33 @@
 package utils
 
 import (
-	"time"
+	"crypto/rand"
 	"errors"
-	"math/rand"
+	"math/big"
 )
 
 func GenerateRandomOTP(length int, useDigits bool) (string, error) {
-    if length <= 0 {
+	if length <= 0 {
 		return "", errors.New("OTP length must be greater than 0")
 	}
 
 	var chars string
-    if useDigits {
-        chars = "0123456789"
-    } else {
-        chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" // Use letters and digits
-    }
+	if useDigits {
+		chars = "0123456789"
+	} else {
+		chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	}
 
-    rand.Seed(time.Now().UnixNano())
-    b := make([]byte, length)
-    for i := range b {
-        b[i] = chars[rand.Intn(len(chars))]
-    }
+	b := make([]byte, length)
+	charsLength := big.NewInt(int64(len(chars)))
 
-    return string(b), nil
+	for i := range b {
+		n, err := rand.Int(rand.Reader, charsLength)
+		if err != nil {
+			return "", err
+		}
+		b[i] = chars[n.Int64()]
+	}
+
+	return string(b), nil
 }

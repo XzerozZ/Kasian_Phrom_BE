@@ -13,9 +13,9 @@ type User struct {
 	ImageLink      string         `json:"image_link"`
 	RoleID         int            `json:"-" gorm:"not null"`
 	Role           Role           `json:"role" gorm:"foreignKey:RoleID"`
-	Favorites      []Favorite     `json:"-" gorm:"foreignKey:UserID"`
-	Assets         []Asset        `json:"-" gorm:"foreignKey:UserID"`
-	Loans          []Loan         `json:"-" gorm:"foreignKey:UserID"`
+	Favorites      []Favorite     `json:"favorites,omitempty" gorm:"foreignKey:UserID"`
+	Assets         []Asset        `json:"assets,omitempty" gorm:"foreignKey:UserID"`
+	Loans          []Loan         `json:"loans,omitempty" gorm:"foreignKey:UserID"`
 	House          SelectedHouse  `json:"house" gorm:"foreignKey:UserID"`
 	RetirementPlan RetirementPlan `json:"retirement" gorm:"foreignKey:UserID"`
 	Quiz           Quiz           `json:"risk" gorm:"foreignKey:UserID"`

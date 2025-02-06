@@ -13,7 +13,7 @@ type RetirementUseCase interface {
 	CreateRetirement(retirement entities.RetirementPlan) (*entities.RetirementPlan, int, error)
 	GetRetirementByID(id string) (*entities.RetirementPlan, error)
 	GetRetirementByUserID(userID string) (*entities.RetirementPlan, error)
-	UpdateRetirementByID(id string, retirement entities.RetirementPlan) (*entities.RetirementPlan, error)
+	UpdateRetirementByID(userID string, retirement entities.RetirementPlan) (*entities.RetirementPlan, error)
 }
 
 type RetirementUseCaseImpl struct {
@@ -95,8 +95,8 @@ func (u *RetirementUseCaseImpl) GetRetirementByUserID(userID string) (*entities.
 	return u.retirerepo.GetRetirementByUserID(userID)
 }
 
-func (u *RetirementUseCaseImpl) UpdateRetirementByID(id string, retirement entities.RetirementPlan) (*entities.RetirementPlan, error) {
-	existingRetirement, err := u.retirerepo.GetRetirementByUserID(id)
+func (u *RetirementUseCaseImpl) UpdateRetirementByID(userID string, retirement entities.RetirementPlan) (*entities.RetirementPlan, error) {
+	existingRetirement, err := u.retirerepo.GetRetirementByUserID(userID)
 	if err != nil {
 		return nil, err
 	}
