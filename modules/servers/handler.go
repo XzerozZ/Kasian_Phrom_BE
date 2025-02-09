@@ -10,9 +10,6 @@ import (
 	favControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/controllers"
 	favRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/repositories"
 	favUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/favorite/usecases"
-	historyControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/controllers"
-	historyRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/repositories"
-	historyUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/usecases"
 	loanControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/controllers"
 	loanRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/repositories"
 	loanUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/usecases"
@@ -61,7 +58,6 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 	setupUserRoutes(app, db, jwt, supa, mail)
 	setupRetirementRoutes(app, jwt, db)
 	setupLoanRoutes(app, jwt, db)
-	setupHistoryRoutes(app, jwt, db)
 	setupQuizRoutes(app, jwt, db)
 	setupTransactionRoutes(app, jwt, db)
 
@@ -90,8 +86,9 @@ func SetupNewsRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
 func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) {
 	userRepository := userRepositories.NewGormUserRepository(db)
 	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
-	historyRepository := historyRepositories.NewGormHistoryRepository(db)
-	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, historyRepository, jwt, supa, mail)
+	nhRepository := nhRepositories.NewGormNhRepository(db)
+	assetRepository := assetRepositories.NewGormAssetRepository(db)
+	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, assetRepository, nhRepository, jwt, supa, mail)
 	userController := userControllers.NewUserController(userUseCase)
 
 	authGroup := app.Group("/auth")
@@ -111,6 +108,11 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 	userGroup.Get("/selected", middlewares.JWTMiddleware(jwt), userController.GetSelectedHouseHandler)
 	userGroup.Put("/user", middlewares.JWTMiddleware(jwt), userController.UpdateUserByIDHandler)
 	userGroup.Put("/:nh_id", middlewares.JWTMiddleware(jwt), userController.UpdateSelectedHouseHandler)
+
+	historyGroup := app.Group("/history")
+	historyGroup.Post("/", middlewares.JWTMiddleware(jwt), userController.CreateHistoryHandler)
+	historyGroup.Get("/", middlewares.JWTMiddleware(jwt), userController.GetHistoryByUserIDHandler)
+	historyGroup.Get("/summary", middlewares.JWTMiddleware(jwt), userController.GetSummaryHistoryByUserIDHandler)
 }
 
 func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
@@ -177,19 +179,6 @@ func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	loanGroup.Get("/", middlewares.JWTMiddleware(jwt), loanController.GetLoanByUserIDHandler)
 	loanGroup.Put("/:id/status", middlewares.JWTMiddleware(jwt), loanController.UpdateLoanStatusByIDHandler)
 	loanGroup.Delete("/:id", loanController.DeleteLoanHandler)
-}
-
-func setupHistoryRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
-	historyRepository := historyRepositories.NewGormHistoryRepository(db)
-	userRepository := userRepositories.NewGormUserRepository(db)
-	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
-	historyUseCase := historyUseCases.NewHistoryUseCase(historyRepository, userRepository, retirementRepository, db)
-	historyController := historyControllers.NewHistoryController(historyUseCase)
-
-	retirementGroup := app.Group("/history")
-	retirementGroup.Post("/", middlewares.JWTMiddleware(jwt), historyController.CreateHistoryHandler)
-	retirementGroup.Get("/", middlewares.JWTMiddleware(jwt), historyController.GetHistoryByUserIDHandler)
-	retirementGroup.Get("/summary", middlewares.JWTMiddleware(jwt), historyController.GetSummaryHistoryByUserIDHandler)
 }
 
 func setupQuizRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {

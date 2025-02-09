@@ -58,6 +58,10 @@ func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementP
 		return nil, 0, errors.New("expectedInflation must be greater than zero")
 	}
 
+	if retirement.ExpectedMonthlyExpenses <= 0 {
+		return nil, 0, errors.New("expectedMonthlyExpenses must be greater than zero")
+	}
+
 	if retirement.AnnualExpenseIncrease < 0 {
 		return nil, 0, errors.New("annualExpenseIncrease must be greater than or equal to zero")
 	}
@@ -79,6 +83,7 @@ func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementP
 	}
 
 	retirement.ID = uuid.New().String()
+	retirement.Status = "In_Progress"
 	createdRetire, err := u.retirerepo.CreateRetirement(&retirement)
 	if err != nil {
 		return nil, 0, err
@@ -136,6 +141,10 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(userID string, retirement e
 
 	if retirement.AnnualInvestmentReturn < 0 {
 		return nil, errors.New("annualInvestmentReturn must be greater than or equal to zero")
+	}
+
+	if retirement.ExpectedMonthlyExpenses <= 0 {
+		return nil, errors.New("expectedMonthlyExpenses must be greater than zero")
 	}
 
 	if age >= retirement.RetirementAge {

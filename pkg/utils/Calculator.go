@@ -53,10 +53,6 @@ func CalculateAge(birthDateStr string) (int, error) {
 }
 
 func CalculateRetirementFunds(plan MonthlyExpensesPlan) (float64, error) {
-	if plan.ExpectedMonthlyExpenses <= 0 || plan.AnnualExpenseIncrease < 0 || plan.ExpectedInflation < 0 {
-		return 0, errors.New("expected monthly expenses, annual expense increase, and inflation must be greater than zero")
-	}
-
 	yearsUntilRetirement := plan.RetirementAge - plan.Age
 	yearsInRetirement := plan.ExpectLifespan - plan.RetirementAge
 	if yearsUntilRetirement <= 0 {
@@ -97,6 +93,10 @@ func CalculateMonthlySavings(plan MonthlyExpensesPlan) (float64, error) {
 }
 
 func CalculateMonthlyExpenses(asset *entities.Asset) (float64, error) {
+	if asset.Status == "Completed" {
+		return 0, nil
+	}
+
 	endYear, err := strconv.Atoi(asset.EndYear)
 	if err != nil {
 		return 0, err
@@ -121,12 +121,14 @@ func CalculateMonthlyExpenses(asset *entities.Asset) (float64, error) {
 func CalculateAllAssetsMonthlyExpenses(user *entities.User) (float64, error) {
 	var total float64
 	for _, asset := range user.Assets {
-		monthlyExpense, err := CalculateMonthlyExpenses(&asset)
-		if err != nil {
-			return 0, err
-		}
+		if asset.Status == "In_Progress" {
+			monthlyExpense, err := CalculateMonthlyExpenses(&asset)
+			if err != nil {
+				return 0, err
+			}
 
-		total += monthlyExpense
+			total += monthlyExpense
+		}
 	}
 
 	total = math.Round(total)
@@ -134,6 +136,10 @@ func CalculateAllAssetsMonthlyExpenses(user *entities.User) (float64, error) {
 }
 
 func CalculateNursingHouseMonthlyExpenses(user *entities.User) (float64, error) {
+	if user.House.NursingHouseID != "00001" {
+		return 0, nil
+	}
+
 	monthsUntilRetirement := user.RetirementPlan.RetirementAge * 12
 	yearUntilLifespan := user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge
 	totalNursingHouseCost := user.House.NursingHouse.Price * yearUntilLifespan
@@ -150,4 +156,14 @@ func CalculateAllAssetSavings(user *entities.User) (float64, error) {
 
 	total = math.Round(total)
 	return total, nil
+}
+
+func DistributeSavingMoney(amount float64, count int) []float64 {
+	portion := amount / float64(count)
+	amounts := make([]float64, count)
+	for i := range amounts {
+		amounts[i] = portion
+	}
+
+	return amounts
 }
