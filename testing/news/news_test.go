@@ -1,4 +1,4 @@
-package usecases
+package usecases_test
 
 import (
 	"errors"

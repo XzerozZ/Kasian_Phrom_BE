@@ -5,6 +5,7 @@ import (
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
+	userUsecase "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 	"github.com/google/uuid"
 )
@@ -17,11 +18,15 @@ type RetirementUseCase interface {
 }
 
 type RetirementUseCaseImpl struct {
-	retirerepo repositories.RetirementRepository
+	retirerepo  repositories.RetirementRepository
+	userusecase userUsecase.UserUseCase
 }
 
-func NewRetirementUseCase(retirerepo repositories.RetirementRepository) *RetirementUseCaseImpl {
-	return &RetirementUseCaseImpl{retirerepo: retirerepo}
+func NewRetirementUseCase(retirerepo repositories.RetirementRepository, userusecase userUsecase.UserUseCase) *RetirementUseCaseImpl {
+	return &RetirementUseCaseImpl{
+		retirerepo:  retirerepo,
+		userusecase: userusecase,
+	}
 }
 
 func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementPlan) (*entities.RetirementPlan, int, error) {
@@ -106,6 +111,7 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(userID string, retirement e
 		return nil, err
 	}
 
+	currentTotalMoney := existingRetirement.CurrentSavings + existingRetirement.CurrentTotalInvestment
 	age, err := utils.CalculateAge(retirement.BirthDate)
 	if err != nil {
 		return nil, err
@@ -168,6 +174,18 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(userID string, retirement e
 	existingRetirement.AnnualExpenseIncrease = retirement.AnnualExpenseIncrease
 	existingRetirement.AnnualSavingsReturn = retirement.AnnualSavingsReturn
 	existingRetirement.AnnualInvestmentReturn = retirement.AnnualInvestmentReturn
+	retirementData, err := u.userusecase.CalculateRetirement(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	allRequiredFund := retirementData["allRequiredFund"].(float64)
+	if currentTotalMoney >= allRequiredFund {
+		existingRetirement.Status = "Completed"
+	} else {
+		existingRetirement.Status = "In_Progress"
+	}
+
 	updatedRetirement, err := u.retirerepo.UpdateRetirementPlan(existingRetirement)
 	if err != nil {
 		return nil, err
