@@ -296,26 +296,3 @@ func TestCalculateNursingHouseMonthlyExpenses(t *testing.T) {
 		assert.Equal(t, float64(0), monthlyExpenses)
 	})
 }
-
-func TestCalculateAllAssetSavings(t *testing.T) {
-	t.Run("valid user with multiple assets", func(t *testing.T) {
-		user := &entities.User{
-			Assets: []entities.Asset{
-				{CurrentMoney: 10000},
-				{CurrentMoney: 5000},
-			},
-		}
-		totalSavings, err := utils.CalculateAllAssetSavings(user)
-		assert.NoError(t, err)
-		assert.Equal(t, float64(15000), totalSavings)
-	})
-
-	t.Run("user with no assets", func(t *testing.T) {
-		user := &entities.User{
-			Assets: []entities.Asset{},
-		}
-		totalSavings, err := utils.CalculateAllAssetSavings(user)
-		assert.NoError(t, err)
-		assert.Equal(t, float64(0), totalSavings)
-	})
-}

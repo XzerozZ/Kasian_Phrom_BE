@@ -148,14 +148,24 @@ func CalculateNursingHouseMonthlyExpenses(user *entities.User) (float64, error) 
 	return cost, nil
 }
 
-func CalculateAllAssetSavings(user *entities.User) (float64, error) {
+func CalculateAllAssetSavings(user *entities.User, method string) float64 {
 	var total float64
-	for _, asset := range user.Assets {
-		total += asset.CurrentMoney
+	if method == "All" {
+		for _, asset := range user.Assets {
+			total += asset.CurrentMoney
+		}
+	} else if method == "Plan" {
+		for _, asset := range user.Assets {
+			if asset.Status == "Completed" {
+				total += asset.TotalCost
+			} else {
+				total += asset.CurrentMoney
+			}
+		}
 	}
 
 	total = math.Round(total)
-	return total, nil
+	return total
 }
 
 func DistributeSavingMoney(amount float64, count int) []float64 {
