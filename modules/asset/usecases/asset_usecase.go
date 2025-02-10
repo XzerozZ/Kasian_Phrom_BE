@@ -59,7 +59,37 @@ func (u *AssetUseCaseImpl) GetAssetByID(id string) (*entities.Asset, error) {
 }
 
 func (u *AssetUseCaseImpl) GetAssetByUserID(userID string) ([]entities.Asset, error) {
-	return u.assetrepo.GetAssetByUserID(userID)
+	assets, err := u.assetrepo.GetAssetByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	currentYear := time.Now().Year()
+	for i := range assets {
+		endYear, err := strconv.Atoi(assets[i].EndYear)
+		if err != nil {
+			return nil, err
+		}
+
+		if assets[i].Status != "completed" && endYear <= currentYear {
+			assets[i].Status = "paused"
+			// message := fmt.Sprintf("สินทรัพย์ '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assets[i].Name)
+			// notification := &entities.Notification{
+			// 	ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assets[i].ID),
+			// 	UserID:    userID,
+			// 	Message:   message,
+			// 	CreatedAt: time.Now(),
+			// }
+			// u.notificationrepo.CreateNotification(notification)
+
+			_, err := u.assetrepo.UpdateAssetByID(&assets[i])
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return assets, nil
 }
 
 func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*entities.Asset, error) {
@@ -77,16 +107,16 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 		return nil, err
 	}
 
-	currentYear := time.Now().Year()
-	if endYear < currentYear {
-		return nil, errors.New("end year must be greater than or equal to current year")
-	}
-
 	existingAsset.TotalCost = asset.TotalCost
 	existingAsset.Name = asset.Name
 	existingAsset.Type = asset.Type
 	existingAsset.EndYear = asset.EndYear
 	existingAsset.Status = asset.Status
+	currentYear := time.Now().Year()
+	if endYear <= currentYear {
+		existingAsset.Status = "Paused"
+	}
+
 	if existingAsset.Status != "Paused" {
 		if existingAsset.TotalCost <= existingAsset.CurrentMoney {
 			existingAsset.Status = "Completed"

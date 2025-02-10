@@ -480,9 +480,9 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 	totalNursingHouseCost := float64((plan.ExpectLifespan-plan.RetirementAge)*12*user.House.NursingHouse.Price) - user.House.CurrentMoney
 	allRequiredFund := requiredAllFunds + allCostAsset + totalNursingHouseCost
 	allSavingforPlan := moneyForPlan + plan.CurrentSavings + assetSavingsforPlan + cost
-	allSavingforAll := assetSavingsforAll + user.House.CurrentMoney // เงินออม
-	allMoney := allSavingforAll + plan.CurrentTotalInvestment       // เงินสุทธิ
-	stillNeed := allRequiredFund - allSavingforPlan                 // เงินที่ต้องเก็บอีก
+	allSavingforAll := plan.CurrentSavings + assetSavingsforAll + user.House.CurrentMoney // เงินออม
+	allMoney := allSavingforAll + plan.CurrentTotalInvestment                             // เงินสุทธิ
+	stillNeed := allRequiredFund - allSavingforPlan                                       // เงินที่ต้องเก็บอีก
 	response := fiber.Map{
 		"plan_name":                plan.PlanName,
 		"allRequiredFund":          allRequiredFund,
@@ -536,17 +536,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					validHouse = &user.House
 				}
 
-				var validPlan *entities.RetirementPlan
-				if user.RetirementPlan.Status != "Completed" {
-					validPlan = &user.RetirementPlan
-				}
-
 				count := len(validAssets)
 				if validHouse != nil {
-					count++
-				}
-
-				if validPlan != nil {
 					count++
 				}
 
@@ -575,27 +566,19 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					index++
 				}
 
-				if validPlan != nil {
-					user.RetirementPlan.CurrentSavings += amounts[index]
-					allRequiredFund := retirementData["allretirementfund"].(float64)
-					allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-					if allMoney >= allRequiredFund {
-						user.RetirementPlan.Status = "Completed"
-					}
-				} else {
-					return nil, errors.New("cannot update completed retirement plan")
+				user.RetirementPlan.CurrentSavings += amounts[index]
+				allRequiredFund := retirementData["allretirementfund"].(float64)
+				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+				if allMoney >= allRequiredFund {
+					user.RetirementPlan.Status = "Completed"
 				}
 
 			case "retirementplan":
-				if user.RetirementPlan.Status != "Completed" {
-					user.RetirementPlan.CurrentSavings += history.Money
-					allRequiredFund := retirementData["allretirementfund"].(float64)
-					allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-					if allMoney >= allRequiredFund {
-						user.RetirementPlan.Status = "Completed"
-					}
-				} else {
-					return nil, errors.New("cannot update completed retirement plan")
+				user.RetirementPlan.CurrentSavings += history.Money
+				allRequiredFund := retirementData["allretirementfund"].(float64)
+				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+				if allMoney >= allRequiredFund {
+					user.RetirementPlan.Status = "Completed"
 				}
 
 			case "house":
@@ -645,14 +628,24 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 		if history.Type == "saving_money" {
 			switch history.Category {
 			case "retirementplan":
-				if user.RetirementPlan.Status != "Completed" {
-					user.RetirementPlan.CurrentSavings -= history.Money
-				} else {
-					return nil, errors.New("cannot update completed retirement plan")
+				if user.RetirementPlan.CurrentSavings < history.Money {
+					return nil, errors.New("insufficient funds in retirement savings")
 				}
 
+				user.RetirementPlan.CurrentSavings -= history.Money
+				allRequiredFund := retirementData["allretirementfund"].(float64)
+				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+				if allMoney >= allRequiredFund {
+					user.RetirementPlan.Status = "Completed"
+				} else {
+					user.RetirementPlan.Status = "In_Progress"
+				}
 			case "house":
 				if user.House.NursingHouseID != "00001" || user.House.Status != "Completed" {
+					if user.House.CurrentMoney < history.Money {
+						return nil, errors.New("insufficient funds for house savings")
+					}
+
 					user.House.CurrentMoney -= history.Money
 				} else {
 					return nil, errors.New("cannot update completed nursing house")
@@ -665,6 +658,10 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				}
 
 				if asset.Status != "Completed" {
+					if asset.CurrentMoney < history.Money {
+						return nil, errors.New("insufficient funds for asset savings")
+					}
+
 					asset.CurrentMoney -= history.Money
 					if asset.CurrentMoney >= asset.TotalCost {
 						asset.Status = "Completed"
@@ -687,6 +684,13 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 			}
 
 			user.RetirementPlan.CurrentTotalInvestment -= history.Money
+			allRequiredFund := retirementData["allretirementfund"].(float64)
+			allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+			if allMoney >= allRequiredFund {
+				user.RetirementPlan.Status = "Completed"
+			} else {
+				user.RetirementPlan.Status = "In_Progress"
+			}
 		}
 
 	default:
