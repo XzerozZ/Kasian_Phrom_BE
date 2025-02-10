@@ -107,16 +107,8 @@ func CalculateMonthlyExpenses(asset *entities.Asset) (float64, error) {
 		return 0, errors.New("end year must be greater than current year")
 	}
 
-	if asset.LastCalculatedMonth == currentMonth {
-		return asset.MonthlyExpenses, nil
-	}
-
 	remainingMonths := (endYear-currentYear-1)*12 + (12 - currentMonth + 1)
 	remainingCost := asset.TotalCost - asset.CurrentMoney
-	if remainingCost < 0 {
-		return 0, errors.New("current money cannot exceed total cost")
-	}
-
 	monthlyExpenses := remainingCost / float64(remainingMonths)
 	monthlyExpenses = math.Round(monthlyExpenses)
 	return monthlyExpenses, nil
@@ -157,4 +149,30 @@ func CalculateAllAssetSavings(user *entities.User, method string) float64 {
 
 	total = math.Round(total)
 	return total
+}
+
+func CalculateNursingHouseMonthlyExpense(user *entities.User) (float64, error) {
+	if user.House.Status == "Completed" || user.House.NursingHouseID == "00001" {
+		return 0, nil
+	}
+
+	layout := "02-01-2006"
+	birthDate, err := time.Parse(layout, user.RetirementPlan.BirthDate)
+	if err != nil {
+		return 0, errors.New("invalid BirthDate format, expected DD-MM-YYYY")
+	}
+
+	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
+	retirementYear := birthDate.Year() + user.RetirementPlan.RetirementAge
+	retirementMonth := birthDate.Month()
+	remainingMonths := (retirementYear-currentYear)*12 + (int(retirementMonth) - currentMonth)
+	if remainingMonths <= 0 {
+		return 0, nil
+	}
+
+	totalCost := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
+	remainingCost := float64(totalCost) - user.House.CurrentMoney
+	monthlyExpenses := remainingCost / float64(remainingMonths)
+	monthlyExpenses = math.Round(monthlyExpenses)
+	return monthlyExpenses, nil
 }

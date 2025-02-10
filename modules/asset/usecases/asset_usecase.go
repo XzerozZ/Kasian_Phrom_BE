@@ -133,13 +133,16 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 		return nil, err
 	}
 
-	monthlyExpenses, err := utils.CalculateMonthlyExpenses(existingAsset)
-	if err != nil {
-		return nil, err
+	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
+	if existingAsset.LastCalculatedMonth != currentMonth || existingAsset.TotalCost != asset.TotalCost {
+		monthlyExpenses, err := utils.CalculateMonthlyExpenses(existingAsset)
+		if err != nil {
+			return nil, err
+		}
+		existingAsset.MonthlyExpenses = monthlyExpenses
+		existingAsset.LastCalculatedMonth = currentMonth
 	}
 
-	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
-	existingAsset.MonthlyExpenses = monthlyExpenses
 	existingAsset.TotalCost = asset.TotalCost
 	existingAsset.Name = asset.Name
 	existingAsset.Type = asset.Type

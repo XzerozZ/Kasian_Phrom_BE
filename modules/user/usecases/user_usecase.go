@@ -3,6 +3,7 @@ package usecases
 import (
 	"errors"
 	"fmt"
+	"math"
 	"mime/multipart"
 	"os"
 	"time"
@@ -241,7 +242,41 @@ func (u *UserUseCaseImpl) GetUserByID(userID string) (*entities.User, error) {
 }
 
 func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHouse, error) {
-	return u.userrepo.GetSelectedHouse(userID)
+	house, err := u.userrepo.GetSelectedHouse(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	currentMonth := int(time.Now().Month())
+	if house.NursingHouseID == "00001" {
+		house.MonthlyExpenses = 0
+		house.LastCalculatedMonth = 0
+		_, err = u.userrepo.UpdateSelectedHouse(house)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if house.LastCalculatedMonth != currentMonth {
+		user, err := u.userrepo.GetUserByID(userID)
+		if err != nil {
+			return nil, err
+		}
+
+		monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user)
+		if err != nil {
+			return nil, err
+		}
+
+		house.MonthlyExpenses = monthlyExpenses
+		house.LastCalculatedMonth = currentMonth
+		_, err = u.userrepo.UpdateSelectedHouse(house)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return house, nil
 }
 
 func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error) {
@@ -292,10 +327,13 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 		return nil, err
 	}
 
+	currentMonth := int(time.Now().Month())
 	selectedHouse.NursingHouseID = nursingHouseID
 	if nursingHouseID == "00001" {
 		selectedHouse.Status = "Completed"
-	} else {
+		selectedHouse.LastCalculatedMonth = 0
+		selectedHouse.MonthlyExpenses = 0
+	} else if nursingHouseID != selectedHouse.NursingHouseID {
 		user, err := u.userrepo.GetUserByID(userID)
 		if err != nil {
 			return nil, err
@@ -306,11 +344,39 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 			return nil, err
 		}
 
+		monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user)
+		if err != nil {
+			return nil, err
+		}
+
+		selectedHouse.MonthlyExpenses = monthlyExpenses
+		selectedHouse.LastCalculatedMonth = currentMonth
 		requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * nursingHouse.Price
 		if float64(requiredMoney) > user.House.CurrentMoney {
 			selectedHouse.Status = "In_Progress"
 		} else {
 			selectedHouse.Status = "Completed"
+		}
+	} else {
+		if selectedHouse.LastCalculatedMonth != currentMonth {
+			user, err := u.userrepo.GetUserByID(userID)
+			if err != nil {
+				return nil, err
+			}
+
+			monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user)
+			if err != nil {
+				return nil, err
+			}
+
+			selectedHouse.MonthlyExpenses = monthlyExpenses
+			selectedHouse.LastCalculatedMonth = currentMonth
+			requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
+			if float64(requiredMoney) > user.House.CurrentMoney {
+				selectedHouse.Status = "In_Progress"
+			} else {
+				selectedHouse.Status = "Completed"
+			}
 		}
 	}
 
@@ -489,16 +555,16 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 	stillNeed := allRequiredFund - allSavingforPlan                                       // เงินที่ต้องเก็บอีก
 	response := fiber.Map{
 		"plan_name":                plan.PlanName,
-		"allRequiredFund":          allRequiredFund,
-		"stillneed":                stillNeed,
-		"allretirementfund":        requiredAllFunds,
-		"monthly_expenses":         adjustedMonthlyExpenses,
-		"plan_saving":              float64(plan.CurrentSavings),
-		"all_money":                float64(allMoney),
-		"saving":                   float64(allSavingforAll),
-		"investment":               float64(plan.CurrentTotalInvestment),
-		"totalHouseCost":           totalNursingHouseCost,
-		"totalAssetCost":           allCostAsset,
+		"allRequiredFund":          math.Round(allRequiredFund),
+		"stillneed":                math.Round(stillNeed),
+		"allretirementfund":        math.Round(requiredAllFunds),
+		"monthly_expenses":         math.Round(adjustedMonthlyExpenses),
+		"plan_saving":              math.Round(plan.CurrentSavings),
+		"all_money":                math.Round(allMoney),
+		"saving":                   math.Round(allSavingforAll),
+		"investment":               math.Round(plan.CurrentTotalInvestment),
+		"totalHouseCost":           math.Round(totalNursingHouseCost),
+		"totalAssetCost":           math.Round(allCostAsset),
 		"annual_savings_return":    plan.AnnualSavingsReturn,
 		"annual_investment_return": plan.AnnualInvestmentReturn,
 	}
