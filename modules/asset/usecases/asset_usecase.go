@@ -9,6 +9,7 @@ import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	notiRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 )
 
 type AssetUseCase interface {
@@ -46,12 +47,19 @@ func (u *AssetUseCaseImpl) CreateAsset(asset entities.Asset) (*entities.Asset, e
 		return nil, err
 	}
 
-	currentYear := time.Now().Year()
+	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 	if endYear < currentYear {
 		return nil, errors.New("end year must be greater than or equal to current year")
 	}
 
+	monthlyExpenses, err := utils.CalculateMonthlyExpenses(&asset)
+	if err != nil {
+		return nil, err
+	}
+
 	asset.ID = id
+	asset.MonthlyExpenses = monthlyExpenses
+	asset.LastCalculatedMonth = currentMonth
 	createdAsset, err := u.assetrepo.CreateAsset(&asset)
 	if err != nil {
 		return nil, err
@@ -70,7 +78,7 @@ func (u *AssetUseCaseImpl) GetAssetByUserID(userID string) ([]entities.Asset, er
 		return nil, err
 	}
 
-	currentYear := time.Now().Year()
+	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 	for i := range assets {
 		endYear, err := strconv.Atoi(assets[i].EndYear)
 		if err != nil {
@@ -93,6 +101,18 @@ func (u *AssetUseCaseImpl) GetAssetByUserID(userID string) ([]entities.Asset, er
 				return nil, err
 			}
 		}
+
+		if assets[i].LastCalculatedMonth != currentMonth {
+			newMonthlyExpenses, err := utils.CalculateMonthlyExpenses(&assets[i])
+			if err == nil {
+				assets[i].MonthlyExpenses = newMonthlyExpenses
+				assets[i].LastCalculatedMonth = currentMonth
+				_, err = u.assetrepo.UpdateAssetByID(&assets[i])
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
 	}
 
 	return assets, nil
@@ -113,17 +133,22 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 		return nil, err
 	}
 
+	monthlyExpenses, err := utils.CalculateMonthlyExpenses(existingAsset)
+	if err != nil {
+		return nil, err
+	}
+
+	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
+	existingAsset.MonthlyExpenses = monthlyExpenses
 	existingAsset.TotalCost = asset.TotalCost
 	existingAsset.Name = asset.Name
 	existingAsset.Type = asset.Type
 	existingAsset.EndYear = asset.EndYear
 	existingAsset.Status = asset.Status
-	currentYear := time.Now().Year()
+	existingAsset.LastCalculatedMonth = currentMonth
 	if endYear <= currentYear {
 		existingAsset.Status = "Paused"
-	}
-
-	if existingAsset.Status != "Paused" {
+	} else {
 		if existingAsset.TotalCost <= existingAsset.CurrentMoney {
 			existingAsset.Status = "Completed"
 		} else {

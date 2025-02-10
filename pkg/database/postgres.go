@@ -47,6 +47,7 @@ func InitDB(config configs.PostgreSQL) {
 		&entities.Risk{},
 		&entities.Quiz{},
 		&entities.Transaction{},
+		&entities.Notification{},
 	)
 
 	insertRoles()
