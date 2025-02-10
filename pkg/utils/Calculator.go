@@ -135,19 +135,6 @@ func CalculateAllAssetsMonthlyExpenses(user *entities.User) (float64, error) {
 	return total, nil
 }
 
-func CalculateNursingHouseMonthlyExpenses(user *entities.User) (float64, error) {
-	if user.House.NursingHouseID != "00001" {
-		return 0, nil
-	}
-
-	monthsUntilRetirement := user.RetirementPlan.RetirementAge * 12
-	yearUntilLifespan := user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge
-	totalNursingHouseCost := user.House.NursingHouse.Price * yearUntilLifespan
-	cost := float64(totalNursingHouseCost) / float64(monthsUntilRetirement)
-	cost = math.Round(cost)
-	return cost, nil
-}
-
 func CalculateAllAssetSavings(user *entities.User, method string) float64 {
 	var total float64
 	if method == "All" {

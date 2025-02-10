@@ -533,29 +533,9 @@ func (c *UserController) GetSelectedHouseHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	data, err := c.userusecase.GetUserByID(userID)
-	if err != nil {
-		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      fiber.ErrInternalServerError.Message,
-			"status_code": fiber.ErrInternalServerError.Code,
-			"message":     err.Error(),
-			"result":      nil,
-		})
-	}
-
-	monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpenses(data)
-	if err != nil {
-		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      fiber.ErrInternalServerError.Message,
-			"status_code": fiber.ErrInternalServerError.Code,
-			"message":     err.Error(),
-			"result":      nil,
-		})
-	}
-
 	response := fiber.Map{
 		"selected":         selectedHouse,
-		"monthly_expenses": monthlyExpenses,
+		"monthly_expenses": selectedHouse.NursingHouse.Price,
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{

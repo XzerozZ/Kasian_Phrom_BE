@@ -427,10 +427,7 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 	nursingHousePrice := 0.0
 	cost := user.House.CurrentMoney
 	if user.House.NursingHouse.ID != "" && user.House.Status != "Completed" {
-		nursingHousePrice, err = utils.CalculateNursingHouseMonthlyExpenses(user)
-		if err != nil {
-			return fiber.Map{}, err
-		}
+		nursingHousePrice = float64(user.House.NursingHouse.Price)
 	} else if user.House.Status == "Completed" {
 		cost = float64((plan.ExpectLifespan - plan.RetirementAge) * 12 * user.House.NursingHouse.Price)
 	}
@@ -487,14 +484,19 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 	allMoney := allSavingforAll + plan.CurrentTotalInvestment       // เงินสุทธิ
 	stillNeed := allRequiredFund - allSavingforPlan                 // เงินที่ต้องเก็บอีก
 	response := fiber.Map{
-		"allRequiredFund":   allRequiredFund,
-		"stillneed":         stillNeed,
-		"allretirementfund": requiredAllFunds,
-		"monthly_expenses":  adjustedMonthlyExpenses,
-		"plan_saving":       float64(plan.CurrentSavings),
-		"all_money":         float64(allMoney),
-		"saving":            float64(allSavingforAll),
-		"investment":        float64(plan.CurrentTotalInvestment),
+		"plan_name":                plan.PlanName,
+		"allRequiredFund":          allRequiredFund,
+		"stillneed":                stillNeed,
+		"allretirementfund":        requiredAllFunds,
+		"monthly_expenses":         adjustedMonthlyExpenses,
+		"plan_saving":              float64(plan.CurrentSavings),
+		"all_money":                float64(allMoney),
+		"saving":                   float64(allSavingforAll),
+		"investment":               float64(plan.CurrentTotalInvestment),
+		"totalHouseCost":           totalNursingHouseCost,
+		"totalAssetCost":           allCostAsset,
+		"annual_savings_return":    plan.AnnualSavingsReturn,
+		"annual_investment_return": plan.AnnualInvestmentReturn,
 	}
 
 	return response, nil
@@ -613,14 +615,18 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					return nil, err
 				}
 
-				asset.CurrentMoney += history.Money
-				if asset.CurrentMoney >= asset.TotalCost {
-					asset.Status = "Completed"
-				}
+				if asset.Status == "In_Progress" {
+					asset.CurrentMoney += history.Money
+					if asset.CurrentMoney >= asset.TotalCost {
+						asset.Status = "Completed"
+					}
 
-				_, err = u.assetrepo.UpdateAssetByID(asset)
-				if err != nil {
-					return nil, err
+					_, err = u.assetrepo.UpdateAssetByID(asset)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					return nil, errors.New("cannot update completed or paused asset")
 				}
 
 			default:
@@ -658,10 +664,18 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					return nil, err
 				}
 
-				asset.CurrentMoney -= history.Money
-				_, err = u.assetrepo.UpdateAssetByID(asset)
-				if err != nil {
-					return nil, err
+				if asset.Status != "Completed" {
+					asset.CurrentMoney -= history.Money
+					if asset.CurrentMoney >= asset.TotalCost {
+						asset.Status = "Completed"
+					}
+
+					_, err = u.assetrepo.UpdateAssetByID(asset)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					return nil, errors.New("cannot update completed asset")
 				}
 
 			default:
