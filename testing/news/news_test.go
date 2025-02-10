@@ -1,232 +1,336 @@
-package controllers_test
+package usecases_test
 
 import (
-	"bytes"
-	"mime/multipart"
-	"net/http/httptest"
+	"errors"
 	"testing"
 
+	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
-	"github.com/XzerozZ/Kasian_Phrom_BE/modules/news/controllers"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-type MockNewsUseCase struct {
+// Mock NewsRepository
+type MockNewsRepository struct {
 	mock.Mock
 }
 
-func (m *MockNewsUseCase) CreateNews(news *entities.News, imageTitle, imageDesc *multipart.FileHeader, ctx *fiber.Ctx) (*entities.News, error) {
-	args := m.Called(news, imageTitle, imageDesc, ctx)
-	if result := args.Get(0); result != nil {
-		return result.(*entities.News), args.Error(1)
-	}
-	return nil, args.Error(1)
+func (m *MockNewsRepository) GetNewsNextID() (string, error) {
+	args := m.Called()
+	return args.String(0), args.Error(1)
 }
 
-func (m *MockNewsUseCase) GetNewsByID(id string) (*entities.News, error) {
+func (m *MockNewsRepository) CreateNews(news *entities.News) (*entities.News, error) {
+	args := m.Called(news)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.News), args.Error(1)
+}
+
+func (m *MockNewsRepository) GetAllNews() ([]entities.News, error) {
+	args := m.Called()
+	return args.Get(0).([]entities.News), args.Error(1)
+}
+
+func (m *MockNewsRepository) GetNewsByID(id string) (*entities.News, error) {
 	args := m.Called(id)
-	if result := args.Get(0); result != nil {
-		return result.(*entities.News), args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
 	}
-	return nil, args.Error(1)
+	return args.Get(0).(*entities.News), args.Error(1)
 }
 
-func (m *MockNewsUseCase) GetAllNews() ([]entities.News, error) {
-	args := m.Called()
-	if result := args.Get(0); result != nil {
-		return result.([]entities.News), args.Error(1)
+func (m *MockNewsRepository) UpdateNewsByID(news *entities.News) (*entities.News, error) {
+	args := m.Called(news)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
 	}
-	return nil, args.Error(1)
+	return args.Get(0).(*entities.News), args.Error(1)
 }
 
-func (m *MockNewsUseCase) GetNewsNextID() (string, error) {
-	args := m.Called()
-	if result := args.Get(0); result != nil {
-		return result.(string), args.Error(1)
-	}
-	return "", args.Error(1)
-}
-
-func (m *MockNewsUseCase) UpdateNewsByID(id string, news entities.News, imageTitle, imageDesc *multipart.FileHeader, shouldDeleteImageDesc bool, ctx *fiber.Ctx) (*entities.News, error) {
-	args := m.Called(id, news, imageTitle, imageDesc, shouldDeleteImageDesc, ctx)
-	if result := args.Get(0); result != nil {
-		return result.(*entities.News), args.Error(1)
-	}
-	return nil, args.Error(1)
-}
-
-func (m *MockNewsUseCase) DeleteNewsByID(id string) error {
+func (m *MockNewsRepository) DeleteNewsByID(id string) error {
 	args := m.Called(id)
 	return args.Error(0)
 }
 
-func TestNewsHandlers(t *testing.T) {
-	mockUseCase := new(MockNewsUseCase)
-	controller := controllers.NewNewsController(mockUseCase)
+func (m *MockNewsRepository) DeleteDialog(id string) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
 
-	app := fiber.New()
-	app.Post("/news", controller.CreateNewsHandler)
-	app.Get("/news", controller.GetAllNewsHandler)
-	app.Get("/news/next-id", controller.GetNewsNextIDHandler)
-	app.Get("/news/:id", controller.GetNewsByIDHandler)
-	app.Put("/news/:id", controller.UpdateNewsByIDHandler)
-	app.Delete("/news/:id", controller.DeleteNewsByIDHandler)
-
-	t.Run("CreateNewsHandler - Success", func(t *testing.T) {
-		body := new(bytes.Buffer)
-		writer := multipart.NewWriter(body)
-
-		_ = writer.WriteField("title", "Test News")
-		_ = writer.WriteField("type", "text")
-		_ = writer.WriteField("desc", "Test Description")
-		_ = writer.WriteField("bold", "true")
-
-		imageTitlePart, _ := writer.CreateFormFile("image_title", "title.jpg")
-		_, _ = imageTitlePart.Write([]byte("dummy title image"))
-
-		imageDescPart, _ := writer.CreateFormFile("image_desc", "desc.jpg")
-		_, _ = imageDescPart.Write([]byte("dummy desc image"))
-
-		writer.Close()
-
-		expectedNews := &entities.News{
-			Title: "Test News",
-			Dialog: []entities.Dialog{
-				{
-					Type: "text",
-					Desc: "Test Description",
-					Bold: true,
-				},
+// Test CreateNews
+func TestCreateNews(t *testing.T) {
+	testCases := []struct {
+		name            string
+		prepareMockRepo func(*MockNewsRepository)
+		news            *entities.News
+		expectedError   bool
+	}{
+		{
+			name: "Successful News Creation",
+			prepareMockRepo: func(m *MockNewsRepository) {
+				m.On("GetNewsNextID").Return("NEWS001", nil)
+				m.On("CreateNews", mock.Anything).Return(&entities.News{ID: "NEWS001"}, nil)
 			},
-		}
-
-		mockUseCase.On("CreateNews",
-			mock.MatchedBy(func(n *entities.News) bool {
-				return n.Title == "Test News" && len(n.Dialog) == 1
-			}),
-			mock.AnythingOfType("*multipart.FileHeader"),
-			mock.AnythingOfType("*multipart.FileHeader"),
-			mock.AnythingOfType("*fiber.Ctx"),
-		).Return(expectedNews, nil)
-
-		req := httptest.NewRequest("POST", "/news", body)
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-
-		resp, err := app.Test(req, -1)
-		assert.NoError(t, err)
-		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
-	})
-
-	t.Run("GetAllNewsHandler - Success", func(t *testing.T) {
-		expectedNews := []entities.News{
-			{
-				Title: "News 1",
+			news: &entities.News{
+				Title: "Test News",
 				Dialog: []entities.Dialog{
-					{Type: "text", Desc: "Description 1", Bold: true},
+					{Type: "text", Desc: "Test Dialog"},
 				},
 			},
-			{
-				Title: "News 2",
+			expectedError: false,
+		},
+		{
+			name: "Failed to Get Next ID",
+			prepareMockRepo: func(m *MockNewsRepository) {
+				m.On("GetNewsNextID").Return("", errors.New("id generation failed"))
+			},
+			news:          &entities.News{},
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockRepo := new(MockNewsRepository)
+			mockConfig := configs.Supabase{}
+			tc.prepareMockRepo(mockRepo)
+			useCase := usecases.NewNewsUseCase(mockRepo, mockConfig)
+			result, err := useCase.CreateNews(tc.news, nil, nil, &fiber.Ctx{})
+
+			if tc.expectedError {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+			}
+
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
+// Test GetAllNews
+func TestGetAllNews(t *testing.T) {
+	testCases := []struct {
+		name            string
+		prepareMockRepo func(*MockNewsRepository)
+		expectedError   bool
+	}{
+		{
+			name: "Successful Retrieval",
+			prepareMockRepo: func(m *MockNewsRepository) {
+				m.On("GetAllNews").Return([]entities.News{
+					{ID: "NEWS001", Title: "News 1"},
+					{ID: "NEWS002", Title: "News 2"},
+				}, nil)
+			},
+			expectedError: false,
+		},
+		{
+			name: "Retrieval Failure",
+			prepareMockRepo: func(m *MockNewsRepository) {
+				m.On("GetAllNews").Return([]entities.News{}, errors.New("retrieval failed"))
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockRepo := new(MockNewsRepository)
+			mockConfig := configs.Supabase{}
+			tc.prepareMockRepo(mockRepo)
+			useCase := usecases.NewNewsUseCase(mockRepo, mockConfig)
+			news, err := useCase.GetAllNews()
+			if tc.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, news)
+			}
+
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
+// Test GetNewsByID
+func TestGetNewsByID(t *testing.T) {
+	testCases := []struct {
+		name            string
+		newsID          string
+		prepareMockRepo func(*MockNewsRepository)
+		expectedError   bool
+	}{
+		{
+			name:   "Successful Retrieval",
+			newsID: "NEWS001",
+			prepareMockRepo: func(m *MockNewsRepository) {
+				m.On("GetNewsByID", "NEWS001").Return(&entities.News{
+					ID:    "NEWS001",
+					Title: "Test News",
+				}, nil)
+			},
+			expectedError: false,
+		},
+		{
+			name:   "Retrieval Failure",
+			newsID: "NONEXISTENT",
+			prepareMockRepo: func(m *MockNewsRepository) {
+				m.On("GetNewsByID", "NONEXISTENT").Return(nil, errors.New("news not found"))
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockRepo := new(MockNewsRepository)
+			mockConfig := configs.Supabase{}
+			tc.prepareMockRepo(mockRepo)
+			useCase := usecases.NewNewsUseCase(mockRepo, mockConfig)
+			news, err := useCase.GetNewsByID(tc.newsID)
+
+			if tc.expectedError {
+				assert.Error(t, err)
+				assert.Nil(t, news)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, news)
+			}
+
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
+// Test UpdateNewsByID
+func TestUpdateNewsByID(t *testing.T) {
+	testCases := []struct {
+		name            string
+		newsID          string
+		prepareMockRepo func(*MockNewsRepository)
+		updateNews      entities.News
+		expectedError   bool
+	}{
+		{
+			name:   "Successful Update",
+			newsID: "NEWS001",
+			prepareMockRepo: func(m *MockNewsRepository) {
+				existingNews := &entities.News{
+					ID:    "NEWS001",
+					Title: "Old Title",
+					Dialog: []entities.Dialog{
+						{ID: "DIALOG001"},
+					},
+				}
+				m.On("GetNewsByID", "NEWS001").Return(existingNews, nil)
+				m.On("DeleteDialog", "DIALOG001").Return(nil)
+				m.On("UpdateNewsByID", mock.Anything).Return(existingNews, nil)
+			},
+			updateNews: entities.News{
+				Title: "New Title",
 				Dialog: []entities.Dialog{
-					{Type: "text", Desc: "Description 2", Bold: false},
+					{Type: "text", Desc: "New Dialog"},
 				},
 			},
-		}
-
-		mockUseCase.On("GetAllNews").Return(expectedNews, nil)
-
-		req := httptest.NewRequest("GET", "/news", nil)
-		resp, err := app.Test(req, -1)
-
-		assert.NoError(t, err)
-		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-	})
-
-	t.Run("UpdateNewsByIDHandler - Success", func(t *testing.T) {
-		id := "123"
-		body := new(bytes.Buffer)
-		writer := multipart.NewWriter(body)
-
-		_ = writer.WriteField("title", "Updated News")
-		_ = writer.WriteField("type", "text")
-		_ = writer.WriteField("desc", "Updated Description")
-		_ = writer.WriteField("bold", "true")
-		_ = writer.WriteField("image_desc", "del_img")
-
-		imageTitlePart, _ := writer.CreateFormFile("image_title", "new_title.jpg")
-		_, _ = imageTitlePart.Write([]byte("new dummy title image"))
-
-		writer.Close()
-
-		expectedNews := &entities.News{
-			Title: "Updated News",
-			Dialog: []entities.Dialog{
-				{
-					Type: "text",
-					Desc: "Updated Description",
-					Bold: true,
-				},
+			expectedError: false,
+		},
+		{
+			name:   "News Not Found",
+			newsID: "NONEXISTENT",
+			prepareMockRepo: func(m *MockNewsRepository) {
+				m.On("GetNewsByID", "NONEXISTENT").Return(nil, errors.New("news not found"))
 			},
-		}
+			updateNews:    entities.News{},
+			expectedError: true,
+		},
+	}
 
-		mockUseCase.On("UpdateNewsByID",
-			id,
-			mock.MatchedBy(func(n entities.News) bool {
-				return n.Title == "Updated News" && len(n.Dialog) == 1
-			}),
-			mock.AnythingOfType("*multipart.FileHeader"),
-			mock.AnythingOfType("*multipart.FileHeader"),
-			true,
-			mock.AnythingOfType("*fiber.Ctx"),
-		).Return(expectedNews, nil)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockRepo := new(MockNewsRepository)
+			mockConfig := configs.Supabase{}
+			tc.prepareMockRepo(mockRepo)
+			useCase := usecases.NewNewsUseCase(mockRepo, mockConfig)
+			result, err := useCase.UpdateNewsByID(
+				tc.newsID,
+				tc.updateNews,
+				nil,
+				nil,
+				false,
+				&fiber.Ctx{},
+			)
 
-		req := httptest.NewRequest("PUT", "/news/"+id, body)
-		req.Header.Set("Content-Type", writer.FormDataContentType())
+			if tc.expectedError {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+			}
 
-		resp, err := app.Test(req, -1)
-		assert.NoError(t, err)
-		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-	})
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
 
-	t.Run("DeleteNewsByIDHandler - Success", func(t *testing.T) {
-		id := "123"
-		mockUseCase.On("DeleteNewsByID", id).Return(nil)
-
-		req := httptest.NewRequest("DELETE", "/news/"+id, nil)
-		resp, err := app.Test(req, -1)
-
-		assert.NoError(t, err)
-		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-	})
-
-	t.Run("GetNewsByIDHandler - Success", func(t *testing.T) {
-		id := "123"
-		expectedNews := &entities.News{
-			Title: "Test News",
-			Dialog: []entities.Dialog{
-				{Type: "text", Desc: "Description", Bold: true},
+// Test DeleteNewsByID
+func TestDeleteNewsByID(t *testing.T) {
+	testCases := []struct {
+		name            string
+		newsID          string
+		prepareMockRepo func(*MockNewsRepository)
+		expectedError   bool
+	}{
+		{
+			name:   "Successful Deletion",
+			newsID: "NEWS001",
+			prepareMockRepo: func(m *MockNewsRepository) {
+				m.On("GetNewsByID", "NEWS001").Return(&entities.News{
+					ID: "NEWS001",
+					Dialog: []entities.Dialog{
+						{ID: "DIALOG001"},
+						{ID: "DIALOG002"},
+					},
+				}, nil)
+				m.On("DeleteDialog", "DIALOG001").Return(nil)
+				m.On("DeleteDialog", "DIALOG002").Return(nil)
+				m.On("DeleteNewsByID", "NEWS001").Return(nil)
 			},
-		}
+			expectedError: false,
+		},
+		{
+			name:   "News Not Found",
+			newsID: "NONEXISTENT",
+			prepareMockRepo: func(m *MockNewsRepository) {
+				m.On("GetNewsByID", "NONEXISTENT").Return(nil, errors.New("news not found"))
+			},
+			expectedError: true,
+		},
+	}
 
-		mockUseCase.On("GetNewsByID", id).Return(expectedNews, nil)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockRepo := new(MockNewsRepository)
+			mockConfig := configs.Supabase{}
+			tc.prepareMockRepo(mockRepo)
+			useCase := usecases.NewNewsUseCase(mockRepo, mockConfig)
 
-		req := httptest.NewRequest("GET", "/news/"+id, nil)
-		resp, err := app.Test(req, -1)
+			err := useCase.DeleteNewsByID(tc.newsID)
 
-		assert.NoError(t, err)
-		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-	})
+			if tc.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 
-	t.Run("GetNewsNextIDHandler - Success", func(t *testing.T) {
-		expectedID := "NEWS-001"
-		mockUseCase.On("GetNewsNextID").Return(expectedID, nil)
-
-		req := httptest.NewRequest("GET", "/news/next-id", nil)
-		resp, err := app.Test(req, -1)
-
-		assert.NoError(t, err)
-		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
-	})
+			mockRepo.AssertExpectations(t)
+		})
+	}
 }

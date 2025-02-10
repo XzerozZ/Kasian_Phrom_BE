@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
+	assetRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
-	historyRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/history/repositories"
+	nhRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 	retirementRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
@@ -26,29 +27,36 @@ type UserUseCase interface {
 	LoginWithGoogle(user *entities.User) (string, *entities.User, error)
 	ResetPassword(userID, oldPassword, newPassword string) error
 	GetUserByID(userID string) (*entities.User, error)
-	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
 	UpdateUserByID(id string, user entities.User, files *multipart.FileHeader, ctx *fiber.Ctx) (*entities.User, error)
-	UpdateSelectedHouse(userID, nursingHouseID string) (*entities.SelectedHouse, error)
 	ForgotPassword(email string) error
 	VerifyOTP(email, otpCode string) error
 	ChangedPassword(email, newPassword string) error
 	CalculateRetirement(userID string) (fiber.Map, error)
+
+	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
+	UpdateSelectedHouse(userID, nursingHouseID string) (*entities.SelectedHouse, error)
+
+	CreateHistory(history entities.History) (*entities.History, error)
+	GetHistoryByUserID(userID string) (fiber.Map, error)
+	GetHistoryByMonth(userID string) (map[string]float64, error)
 }
 
 type UserUseCaseImpl struct {
 	userrepo       repositories.UserRepository
 	retirementrepo retirementRepo.RetirementRepository
-	historyrepo    historyRepo.HistoryRepository
+	assetrepo      assetRepo.AssetRepository
+	nhrepo         nhRepo.NhRepository
 	jwtSecret      string
 	supa           configs.Supabase
 	mail           configs.Mail
 }
 
-func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirementRepo.RetirementRepository, historyrepo historyRepo.HistoryRepository, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) *UserUseCaseImpl {
+func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirementRepo.RetirementRepository, assetrepo assetRepo.AssetRepository, nhrepo nhRepo.NhRepository, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) *UserUseCaseImpl {
 	return &UserUseCaseImpl{
 		userrepo:       userrepo,
 		retirementrepo: retirementrepo,
-		historyrepo:    historyrepo,
+		assetrepo:      assetrepo,
+		nhrepo:         nhrepo,
 		jwtSecret:      jwt.Secret,
 		supa:           supa,
 		mail:           mail,
@@ -281,6 +289,27 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 	}
 
 	selectedHouse.NursingHouseID = nursingHouseID
+	if nursingHouseID == "00001" {
+		selectedHouse.Status = "Completed"
+	} else {
+		user, err := u.userrepo.GetUserByID(userID)
+		if err != nil {
+			return nil, err
+		}
+
+		nursingHouse, err := u.nhrepo.GetNhByID(nursingHouseID)
+		if err != nil {
+			return nil, err
+		}
+
+		requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * nursingHouse.Price
+		if float64(requiredMoney) > user.House.CurrentMoney {
+			selectedHouse.Status = "In_Progress"
+		} else {
+			selectedHouse.Status = "Completed"
+		}
+	}
+
 	updatedHouse, err := u.userrepo.UpdateSelectedHouse(selectedHouse)
 	if err != nil {
 		return nil, err
@@ -382,28 +411,29 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		return fiber.Map{}, err
 	}
 
-	allCostAsset, err := utils.CalculateAllAssetsMonthlyExpenses(user)
-	if err != nil {
-		return fiber.Map{}, err
-	}
-
 	plan := user.RetirementPlan
+	expectedMonthlyExpenses := plan.ExpectedMonthlyExpenses
 	age, err := utils.CalculateRetirementPlanAge(plan.BirthDate, plan.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	nursingHousePrice := 0.0
-	if user.House.NursingHouse.ID != "" {
-		nursingHousePrice, err = utils.CalculateNursingHouseMonthlyExpenses(user)
-		if err != nil {
-			return fiber.Map{}, err
-		}
+	yearsUntilRetirement := plan.RetirementAge - age
+	allCostAsset, err := utils.CalculateAllAssetsMonthlyExpenses(user)
+	if err != nil {
+		return fiber.Map{}, err
 	}
 
-	yearsUntilRetirement := plan.RetirementAge - age
+	nursingHousePrice := 0.0
+	cost := user.House.CurrentMoney
+	if user.House.NursingHouse.ID != "" && user.House.Status != "Completed" {
+		nursingHousePrice = float64(user.House.NursingHouse.Price)
+	} else if user.House.Status == "Completed" {
+		cost = float64((plan.ExpectLifespan - plan.RetirementAge) * 12 * user.House.NursingHouse.Price)
+	}
+
 	monthlyPlan := utils.MonthlyExpensesPlan{
-		ExpectedMonthlyExpenses: plan.ExpectedMonthlyExpenses,
+		ExpectedMonthlyExpenses: expectedMonthlyExpenses,
 		AnnualExpenseIncrease:   plan.AnnualExpenseIncrease,
 		ExpectedInflation:       plan.ExpectedInflation,
 		Age:                     age,
@@ -414,9 +444,12 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		NursingHousePrice:       nursingHousePrice,
 	}
 
-	requiredFunds, err := utils.CalculateMonthlySavings(monthlyPlan)
-	if err != nil {
-		return fiber.Map{}, err
+	requiredFunds := 0.0
+	if plan.Status != "Completed" {
+		requiredFunds, err = utils.CalculateMonthlySavings(monthlyPlan)
+		if err != nil {
+			return fiber.Map{}, err
+		}
 	}
 
 	requiredAllFunds, err := utils.CalculateRetirementFunds(monthlyPlan)
@@ -424,14 +457,11 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		return fiber.Map{}, err
 	}
 
-	assetSavings, err := utils.CalculateAllAssetSavings(user)
-	if err != nil {
-		return fiber.Map{}, err
-	}
-
+	assetSavingsforAll := utils.CalculateAllAssetSavings(user, "All")
+	assetSavingsforPlan := utils.CalculateAllAssetSavings(user, "Plan")
 	currentMonthStart := time.Now().Truncate(24*time.Hour).AddDate(0, 0, -time.Now().Day()+1)
 	currentMonthEnd := currentMonthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
-	deposits, err := u.historyrepo.GetUserDepositsInRange(userID, currentMonthStart, currentMonthEnd)
+	deposits, err := u.userrepo.GetUserDepositsInRange(userID, currentMonthStart, currentMonthEnd)
 	if err != nil {
 		return fiber.Map{}, err
 	}
@@ -441,22 +471,281 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		totalDeposits += history.Money
 	}
 
-	adjustedMonthlyExpenses := requiredFunds - totalDeposits
-	yearUntilLifespan := plan.ExpectLifespan - plan.RetirementAge
-	totalNursingHouseCost := float64(user.House.NursingHouse.Price*yearUntilLifespan) - user.House.CurrentMoney
+	moneyForPlan := plan.CurrentSavings + plan.CurrentTotalInvestment
+	if moneyForPlan >= requiredAllFunds {
+		moneyForPlan = requiredAllFunds
+	}
+
+	adjustedMonthlyExpenses := requiredFunds - totalDeposits // เดือนนี้เหลือเท่าไร
+	totalNursingHouseCost := float64((plan.ExpectLifespan-plan.RetirementAge)*12*user.House.NursingHouse.Price) - user.House.CurrentMoney
 	allRequiredFund := requiredAllFunds + allCostAsset + totalNursingHouseCost
-	allSaving := plan.CurrentSavings + assetSavings + user.House.CurrentMoney
-	allMoney := allSaving + plan.CurrentTotalInvestment
-	stillNeed := allRequiredFund - allMoney
+	allSavingforPlan := moneyForPlan + plan.CurrentSavings + assetSavingsforPlan + cost
+	allSavingforAll := assetSavingsforAll + user.House.CurrentMoney // เงินออม
+	allMoney := allSavingforAll + plan.CurrentTotalInvestment       // เงินสุทธิ
+	stillNeed := allRequiredFund - allSavingforPlan                 // เงินที่ต้องเก็บอีก
 	response := fiber.Map{
-		"allRequiredFund":   allRequiredFund,
-		"stillneed":         stillNeed,
-		"allretirementfund": requiredAllFunds,
-		"monthly_expenses":  adjustedMonthlyExpenses,
-		"all_money":         float64(allMoney),
-		"saving":            float64(allSaving),
-		"investment":        float64(plan.CurrentTotalInvestment),
+		"plan_name":                plan.PlanName,
+		"allRequiredFund":          allRequiredFund,
+		"stillneed":                stillNeed,
+		"allretirementfund":        requiredAllFunds,
+		"monthly_expenses":         adjustedMonthlyExpenses,
+		"plan_saving":              float64(plan.CurrentSavings),
+		"all_money":                float64(allMoney),
+		"saving":                   float64(allSavingforAll),
+		"investment":               float64(plan.CurrentTotalInvestment),
+		"totalHouseCost":           totalNursingHouseCost,
+		"totalAssetCost":           allCostAsset,
+		"annual_savings_return":    plan.AnnualSavingsReturn,
+		"annual_investment_return": plan.AnnualInvestmentReturn,
 	}
 
 	return response, nil
+}
+
+func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.History, error) {
+	user, err := u.userrepo.GetUserByID(history.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if history.Money <= 0 {
+		return nil, errors.New("money must be greater than zero")
+	}
+
+	retirementData, err := u.CalculateRetirement(history.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	history.ID = uuid.New().String()
+	history.TrackDate = time.Now()
+	switch history.Method {
+	case "deposit":
+		if history.Type == "saving_money" {
+			switch history.Category {
+			case "spread":
+				var validAssets []entities.Asset
+				for _, asset := range user.Assets {
+					if asset.Status != "completed" && asset.Status != "paused" {
+						validAssets = append(validAssets, asset)
+					}
+				}
+
+				var validHouse *entities.SelectedHouse
+				if user.House.NursingHouseID != "00001" && user.House.Status != "Completed" {
+					validHouse = &user.House
+				}
+
+				var validPlan *entities.RetirementPlan
+				if user.RetirementPlan.Status != "Completed" {
+					validPlan = &user.RetirementPlan
+				}
+
+				count := len(validAssets)
+				if validHouse != nil {
+					count++
+				}
+
+				if validPlan != nil {
+					count++
+				}
+
+				amounts := utils.DistributeSavingMoney(history.Money, count)
+				index := 0
+				for i := range validAssets {
+					validAssets[i].CurrentMoney += amounts[index]
+					if validAssets[i].CurrentMoney >= validAssets[i].TotalCost {
+						validAssets[i].Status = "Completed"
+					}
+
+					if _, err := u.assetrepo.UpdateAssetByID(&validAssets[i]); err != nil {
+						return nil, err
+					}
+
+					index++
+				}
+
+				if validHouse != nil {
+					user.House.CurrentMoney += amounts[index]
+					requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
+					if user.House.CurrentMoney >= float64(requiredMoney) {
+						user.House.Status = "Completed"
+					}
+
+					index++
+				}
+
+				if validPlan != nil {
+					user.RetirementPlan.CurrentSavings += amounts[index]
+					allRequiredFund := retirementData["allretirementfund"].(float64)
+					allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+					if allMoney >= allRequiredFund {
+						user.RetirementPlan.Status = "Completed"
+					}
+				} else {
+					return nil, errors.New("cannot update completed retirement plan")
+				}
+
+			case "retirementplan":
+				if user.RetirementPlan.Status != "Completed" {
+					user.RetirementPlan.CurrentSavings += history.Money
+					allRequiredFund := retirementData["allretirementfund"].(float64)
+					allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+					if allMoney >= allRequiredFund {
+						user.RetirementPlan.Status = "Completed"
+					}
+				} else {
+					return nil, errors.New("cannot update completed retirement plan")
+				}
+
+			case "house":
+				if user.House.NursingHouseID != "00001" || user.House.Status != "Completed" {
+					user.House.CurrentMoney += history.Money
+					requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
+					if user.House.CurrentMoney >= float64(requiredMoney) {
+						user.House.Status = "Completed"
+					}
+				} else {
+					return nil, errors.New("cannot update completed nursing house")
+				}
+
+			case "asset":
+				asset, err := u.assetrepo.FindAssetByNameandUserID(history.Name, history.UserID)
+				if err != nil {
+					return nil, err
+				}
+
+				if asset.Status == "In_Progress" {
+					asset.CurrentMoney += history.Money
+					if asset.CurrentMoney >= asset.TotalCost {
+						asset.Status = "Completed"
+					}
+
+					_, err = u.assetrepo.UpdateAssetByID(asset)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					return nil, errors.New("cannot update completed or paused asset")
+				}
+
+			default:
+				return nil, errors.New("invalid category for saving_money")
+			}
+		} else if history.Type == "investment" {
+			user.RetirementPlan.CurrentTotalInvestment += history.Money
+			allRequiredFund := retirementData["allretirementfund"].(float64)
+			allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+			if allMoney >= allRequiredFund {
+				user.RetirementPlan.Status = "Completed"
+			}
+		}
+
+	case "withdraw":
+		if history.Type == "saving_money" {
+			switch history.Category {
+			case "retirementplan":
+				if user.RetirementPlan.Status != "Completed" {
+					user.RetirementPlan.CurrentSavings -= history.Money
+				} else {
+					return nil, errors.New("cannot update completed retirement plan")
+				}
+
+			case "house":
+				if user.House.NursingHouseID != "00001" || user.House.Status != "Completed" {
+					user.House.CurrentMoney -= history.Money
+				} else {
+					return nil, errors.New("cannot update completed nursing house")
+				}
+
+			case "asset":
+				asset, err := u.assetrepo.FindAssetByNameandUserID(history.Name, history.UserID)
+				if err != nil {
+					return nil, err
+				}
+
+				if asset.Status != "Completed" {
+					asset.CurrentMoney -= history.Money
+					if asset.CurrentMoney >= asset.TotalCost {
+						asset.Status = "Completed"
+					}
+
+					_, err = u.assetrepo.UpdateAssetByID(asset)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					return nil, errors.New("cannot update completed asset")
+				}
+
+			default:
+				return nil, errors.New("invalid category for saving_money")
+			}
+		} else if history.Type == "investment" {
+			if user.RetirementPlan.CurrentTotalInvestment < history.Money {
+				return nil, errors.New("insufficient investment funds")
+			}
+
+			user.RetirementPlan.CurrentTotalInvestment -= history.Money
+		}
+
+	default:
+		return nil, errors.New("invalid method type")
+	}
+
+	_, err = u.userrepo.UpdateSelectedHouse(&user.House)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = u.retirementrepo.UpdateRetirementPlan(&user.RetirementPlan)
+	if err != nil {
+		return nil, err
+	}
+
+	createdHistory, err := u.userrepo.CreateHistory(&history)
+	if err != nil {
+		return nil, err
+	}
+
+	return createdHistory, nil
+}
+
+func (u *UserUseCaseImpl) GetHistoryByUserID(userID string) (fiber.Map, error) {
+	data, err := u.userrepo.GetHistoryByUserID(userID)
+	if err != nil {
+		return fiber.Map{}, err
+	}
+
+	currentMonthStart := time.Now().Truncate(24*time.Hour).AddDate(0, 0, -time.Now().Day()+1)
+	currentMonthEnd := currentMonthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	histories, err := u.userrepo.GetHistoryInRange(userID, currentMonthStart, currentMonthEnd)
+	if err != nil {
+		return fiber.Map{}, err
+	}
+
+	total := 0.0
+	for _, history := range histories {
+		if history.Method == "deposit" {
+			total += history.Money
+		} else if history.Method == "withdraw" {
+			total -= history.Money
+		}
+	}
+
+	response := fiber.Map{
+		"data":  data,
+		"total": total,
+	}
+
+	return response, nil
+}
+
+func (u *UserUseCaseImpl) GetHistoryByMonth(userID string) (map[string]float64, error) {
+	historyByMonth, err := u.userrepo.GetUserHistoryByMonth(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return historyByMonth, nil
 }

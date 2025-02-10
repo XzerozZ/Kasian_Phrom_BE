@@ -22,6 +22,7 @@ type AssetRepository interface {
 	GetAssetByID(id string) (*entities.Asset, error)
 	GetAssetByUserID(userID string) ([]entities.Asset, error)
 	GetAssetNextID() (string, error)
+	FindAssetByNameandUserID(name, userID string) (*entities.Asset, error)
 	UpdateAssetByID(asset *entities.Asset) (*entities.Asset, error)
 	DeleteAssetByID(id string) error
 }
@@ -66,6 +67,15 @@ func (r *GormAssetRepository) GetAssetNextID() (string, error) {
 	nextID := maxIDInt + 1
 	formattedID := fmt.Sprintf("%05d", nextID)
 	return formattedID, nil
+}
+
+func (r *GormAssetRepository) FindAssetByNameandUserID(name, userID string) (*entities.Asset, error) {
+	var asset entities.Asset
+	if err := r.db.Where("name = ? AND user_id = ?", name, userID).First(&asset).Error; err != nil {
+		return nil, err
+	}
+
+	return &asset, nil
 }
 
 func (r *GormAssetRepository) UpdateAssetByID(asset *entities.Asset) (*entities.Asset, error) {
