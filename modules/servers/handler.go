@@ -16,6 +16,9 @@ import (
 	newsControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/controllers"
 	newsRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/repositories"
 	newsUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
+	notiControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/controllers"
+	notiRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
+	notiUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/usecases"
 	nhControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/controllers"
 	nhRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 	nhUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/usecases"
@@ -54,8 +57,9 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 	userRepository := userRepositories.NewGormUserRepository(db)
 	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
 	nhRepository := nhRepositories.NewGormNhRepository(db)
+	notiRepository := notiRepositories.NewGormNotiRepository(db)
 	assetRepository := assetRepositories.NewGormAssetRepository(db)
-	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, assetRepository, nhRepository, jwt, supa, mail)
+	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, assetRepository, notiRepository, nhRepository, jwt, supa, mail)
 
 	setupNursingHouseRoutes(app, db, supa)
 	SetupNewsRoutes(app, db, supa)
@@ -65,6 +69,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 	setupRetirementRoutes(app, jwt, userUseCase, db)
 	setupLoanRoutes(app, jwt, db)
 	setupQuizRoutes(app, jwt, db)
+	setupNotiRoutes(app, jwt, db)
 	setupTransactionRoutes(app, jwt, db)
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
@@ -94,7 +99,8 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
 	nhRepository := nhRepositories.NewGormNhRepository(db)
 	assetRepository := assetRepositories.NewGormAssetRepository(db)
-	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, assetRepository, nhRepository, jwt, supa, mail)
+	notiRepository := notiRepositories.NewGormNotiRepository(db)
+	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, assetRepository, notiRepository, nhRepository, jwt, supa, mail)
 	userController := userControllers.NewUserController(userUseCase)
 
 	authGroup := app.Group("/auth")
@@ -150,7 +156,8 @@ func setupFavoriteRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 
 func setupAssetRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	assetRepository := assetRepositories.NewGormAssetRepository(db)
-	assetUseCase := assetUseCases.NewAssetUseCase(assetRepository)
+	notiRepository := notiRepositories.NewGormNotiRepository(db)
+	assetUseCase := assetUseCases.NewAssetUseCase(assetRepository, notiRepository)
 	assetController := assetControllers.NewAssetController(assetUseCase)
 
 	assetGroup := app.Group("/asset")
@@ -207,4 +214,14 @@ func setupTransactionRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	transGroup.Post("/all", transController.CreateTransactionsForAllUsersHandler)
 	transGroup.Get("/", middlewares.JWTMiddleware(jwt), transController.GetTransactionByUserIDHandler)
 	transGroup.Put("/:id", middlewares.JWTMiddleware(jwt), transController.MarkTransactiontoPaidHandler)
+}
+
+func setupNotiRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
+	notiRepository := notiRepositories.NewGormNotiRepository(db)
+	notiUseCase := notiUseCases.NewNotiUseCase(notiRepository)
+	notiController := notiControllers.NewNotiController(notiUseCase)
+
+	quizGroup := app.Group("/quiz")
+	quizGroup.Get("/", middlewares.JWTMiddleware(jwt), notiController.GetNotificationsByUserIDHandler)
+	quizGroup.Put("/", middlewares.JWTMiddleware(jwt), notiController.MarkAsReadHandler)
 }

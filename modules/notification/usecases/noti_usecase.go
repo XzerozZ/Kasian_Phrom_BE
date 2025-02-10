@@ -6,6 +6,8 @@ import (
 )
 
 type NotiUsecase interface {
+	GetNotificationsByUserID(userID string) ([]entities.Notification, error)
+	MarkNotificationsAsRead(userID string) error
 }
 
 type NotiUseCaseImpl struct {
@@ -18,4 +20,8 @@ func NewNotiUseCase(notirepo repositories.NotiRepository) *NotiUseCaseImpl {
 
 func (u *NotiUseCaseImpl) GetNotificationsByUserID(userID string) ([]entities.Notification, error) {
 	return u.notirepo.GetNotificationsByUserID(userID)
+}
+
+func (u *NotiUseCaseImpl) MarkNotificationsAsRead(userID string) error {
+	return u.notirepo.MarkNotificationAsRead(userID)
 }

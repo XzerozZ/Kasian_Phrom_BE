@@ -16,6 +16,7 @@ func NewGormNotiRepository(db *gorm.DB) *GormNotiRepository {
 type NotiRepository interface {
 	CreateNotification(notification *entities.Notification) error
 	GetNotificationsByUserID(userID string) ([]entities.Notification, error)
+	MarkNotificationAsRead(userID string) error
 }
 
 func (r *GormNotiRepository) CreateNotification(notification *entities.Notification) error {
@@ -28,6 +29,6 @@ func (r *GormNotiRepository) GetNotificationsByUserID(userID string) ([]entities
 	return notifications, err
 }
 
-func (r *GormNotiRepository) MarkNotificationAsRead(notificationID string) error {
-	return r.db.Model(&entities.Notification{}).Where("id = ?", notificationID).Update("is_read", true).Error
+func (r *GormNotiRepository) MarkNotificationAsRead(userID string) error {
+	return r.db.Model(&entities.Notification{}).Where("user_id = ? AND is_read = false", userID).Update("is_read", true).Error
 }

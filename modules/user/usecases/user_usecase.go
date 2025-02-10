@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"errors"
+	"fmt"
 	"mime/multipart"
 	"os"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	assetRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	notiRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
 	nhRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 	retirementRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
@@ -45,17 +47,19 @@ type UserUseCaseImpl struct {
 	userrepo       repositories.UserRepository
 	retirementrepo retirementRepo.RetirementRepository
 	assetrepo      assetRepo.AssetRepository
+	notirepo       notiRepo.NotiRepository
 	nhrepo         nhRepo.NhRepository
 	jwtSecret      string
 	supa           configs.Supabase
 	mail           configs.Mail
 }
 
-func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirementRepo.RetirementRepository, assetrepo assetRepo.AssetRepository, nhrepo nhRepo.NhRepository, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) *UserUseCaseImpl {
+func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirementRepo.RetirementRepository, assetrepo assetRepo.AssetRepository, notirepo notiRepo.NotiRepository, nhrepo nhRepo.NhRepository, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) *UserUseCaseImpl {
 	return &UserUseCaseImpl{
 		userrepo:       userrepo,
 		retirementrepo: retirementrepo,
 		assetrepo:      assetrepo,
+		notirepo:       notirepo,
 		nhrepo:         nhrepo,
 		jwtSecret:      jwt.Secret,
 		supa:           supa,
@@ -526,7 +530,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 			case "spread":
 				var validAssets []entities.Asset
 				for _, asset := range user.Assets {
-					if asset.Status != "completed" && asset.Status != "paused" {
+					if asset.Status == "In_Progress" {
 						validAssets = append(validAssets, asset)
 					}
 				}
@@ -549,6 +553,14 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						validAssets[i].Status = "Completed"
 					}
 
+					notification := &entities.Notification{
+						ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), validAssets[i].ID),
+						UserID:    user.ID,
+						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", validAssets[i].Name),
+						CreatedAt: time.Now(),
+					}
+
+					_ = u.notirepo.CreateNotification(notification)
 					if _, err := u.assetrepo.UpdateAssetByID(&validAssets[i]); err != nil {
 						return nil, err
 					}
@@ -559,6 +571,14 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
 					if user.House.CurrentMoney >= float64(requiredMoney) {
 						user.House.Status = "Completed"
+						notification := &entities.Notification{
+							ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), validHouse.NursingHouse.Name),
+							UserID:    user.ID,
+							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก : '%s' ได้เสร็จสิ้นแล้ว", validHouse.NursingHouse.Name),
+							CreatedAt: time.Now(),
+						}
+
+						_ = u.notirepo.CreateNotification(notification)
 					}
 
 				}

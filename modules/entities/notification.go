@@ -3,7 +3,7 @@ package entities
 import "time"
 
 type Notification struct {
-	ID        string    `gorm:"primaryKey" json:"id"`
+	ID        string    `json:"id" gorm:"primaryKey"`
 	UserID    string    `json:"user_id"`
 	Message   string    `json:"message" gorm:"not null"`
 	Balance   float64   `json:"balance"`

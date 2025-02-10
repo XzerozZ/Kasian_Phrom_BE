@@ -2,11 +2,13 @@ package usecases
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
+	notiRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
 )
 
 type AssetUseCase interface {
@@ -19,10 +21,14 @@ type AssetUseCase interface {
 
 type AssetUseCaseImpl struct {
 	assetrepo repositories.AssetRepository
+	notirepo  notiRepositories.NotiRepository
 }
 
-func NewAssetUseCase(assetrepo repositories.AssetRepository) *AssetUseCaseImpl {
-	return &AssetUseCaseImpl{assetrepo: assetrepo}
+func NewAssetUseCase(assetrepo repositories.AssetRepository, notirepo notiRepositories.NotiRepository) *AssetUseCaseImpl {
+	return &AssetUseCaseImpl{
+		assetrepo: assetrepo,
+		notirepo:  notirepo,
+	}
 }
 
 func (u *AssetUseCaseImpl) CreateAsset(asset entities.Asset) (*entities.Asset, error) {
@@ -73,15 +79,15 @@ func (u *AssetUseCaseImpl) GetAssetByUserID(userID string) ([]entities.Asset, er
 
 		if assets[i].Status != "completed" && endYear <= currentYear {
 			assets[i].Status = "paused"
-			// message := fmt.Sprintf("สินทรัพย์ '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assets[i].Name)
-			// notification := &entities.Notification{
-			// 	ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assets[i].ID),
-			// 	UserID:    userID,
-			// 	Message:   message,
-			// 	CreatedAt: time.Now(),
-			// }
-			// u.notificationrepo.CreateNotification(notification)
+			message := fmt.Sprintf("สินทรัพย์ '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assets[i].Name)
+			notification := &entities.Notification{
+				ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assets[i].ID),
+				UserID:    userID,
+				Message:   message,
+				CreatedAt: time.Now(),
+			}
 
+			_ = u.notirepo.CreateNotification(notification)
 			_, err := u.assetrepo.UpdateAssetByID(&assets[i])
 			if err != nil {
 				return nil, err
