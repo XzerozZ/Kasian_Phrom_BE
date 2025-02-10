@@ -155,12 +155,8 @@ func CalculateAllAssetSavings(user *entities.User, method string) float64 {
 	return total
 }
 
-func DistributeSavingMoney(amount float64, count int) []float64 {
+func DistributeSavingMoney(amount float64, count int) float64 {
 	portion := amount / float64(count)
-	amounts := make([]float64, count)
-	for i := range amounts {
-		amounts[i] = portion
-	}
 
-	return amounts
+	return portion
 }

@@ -542,9 +542,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				}
 
 				amounts := utils.DistributeSavingMoney(history.Money, count)
-				index := 0
 				for i := range validAssets {
-					validAssets[i].CurrentMoney += amounts[index]
+					validAssets[i].CurrentMoney += amounts
 					if validAssets[i].CurrentMoney >= validAssets[i].TotalCost {
 						validAssets[i].Status = "Completed"
 					}
@@ -552,21 +551,18 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					if _, err := u.assetrepo.UpdateAssetByID(&validAssets[i]); err != nil {
 						return nil, err
 					}
-
-					index++
 				}
 
 				if validHouse != nil {
-					user.House.CurrentMoney += amounts[index]
+					user.House.CurrentMoney += amounts
 					requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
 					if user.House.CurrentMoney >= float64(requiredMoney) {
 						user.House.Status = "Completed"
 					}
 
-					index++
 				}
 
-				user.RetirementPlan.CurrentSavings += amounts[index]
+				user.RetirementPlan.CurrentSavings += amounts
 				allRequiredFund := retirementData["allretirementfund"].(float64)
 				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
 				if allMoney >= allRequiredFund {
