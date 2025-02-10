@@ -541,7 +541,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					count++
 				}
 
-				amounts := utils.DistributeSavingMoney(history.Money, count)
+				amounts := history.Money / float64(count)
 				for i := range validAssets {
 					validAssets[i].CurrentMoney += amounts
 					if validAssets[i].CurrentMoney >= validAssets[i].TotalCost {

@@ -154,9 +154,3 @@ func CalculateAllAssetSavings(user *entities.User, method string) float64 {
 	total = math.Round(total)
 	return total
 }
-
-func DistributeSavingMoney(amount float64, count int) float64 {
-	portion := amount / float64(count)
-
-	return portion
-}
