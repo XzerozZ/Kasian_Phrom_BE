@@ -541,6 +541,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					count++
 				}
 
+				count++
 				amounts := history.Money / float64(count)
 				for i := range validAssets {
 					validAssets[i].CurrentMoney += amounts

@@ -143,7 +143,7 @@ func setupFavoriteRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 
 	favGroup := app.Group("/favorite")
 	favGroup.Post("/", middlewares.JWTMiddleware(jwt), favController.CreateFavHandler)
-	favGroup.Get("/user", middlewares.JWTMiddleware(jwt), favController.GetFavByUserIDHandler)
+	favGroup.Get("/", middlewares.JWTMiddleware(jwt), favController.GetFavByUserIDHandler)
 	favGroup.Get("/:nh_id", middlewares.JWTMiddleware(jwt), favController.CheckFavHandler)
 	favGroup.Delete("/:nh_id", middlewares.JWTMiddleware(jwt), favController.DeleteFavByIDHandler)
 }
