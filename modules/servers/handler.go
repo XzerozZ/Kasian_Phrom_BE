@@ -118,7 +118,7 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 	userGroup.Get("/", middlewares.JWTMiddleware(jwt), userController.GetUserByIDHandler)
 	userGroup.Get("/plan", middlewares.JWTMiddleware(jwt), userController.GetRetirementPlanHandler)
 	userGroup.Get("/selected", middlewares.JWTMiddleware(jwt), userController.GetSelectedHouseHandler)
-	userGroup.Put("/user", middlewares.JWTMiddleware(jwt), userController.UpdateUserByIDHandler)
+	userGroup.Put("/", middlewares.JWTMiddleware(jwt), userController.UpdateUserByIDHandler)
 	userGroup.Put("/:nh_id", middlewares.JWTMiddleware(jwt), userController.UpdateSelectedHouseHandler)
 
 	historyGroup := app.Group("/history")

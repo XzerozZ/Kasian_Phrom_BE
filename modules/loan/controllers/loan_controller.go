@@ -109,15 +109,6 @@ func (c *LoanController) GetLoanByUserIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	if len(loans) == 0 {
-		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"status":      "Not Found",
-			"status_code": fiber.StatusNotFound,
-			"message":     "No Loan found for this user",
-			"result":      nil,
-		})
-	}
-
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,

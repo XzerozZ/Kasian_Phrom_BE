@@ -121,7 +121,6 @@ func TestCalculateMonthlySavings(t *testing.T) {
 			Age:                     30,
 			RetirementAge:           60,
 			ExpectLifespan:          80,
-			YearsUntilRetirement:    30,
 			AllCostAsset:            50000,
 			NursingHousePrice:       10000,
 		}
@@ -133,7 +132,6 @@ func TestCalculateMonthlySavings(t *testing.T) {
 
 	t.Run("zero years until retirement", func(t *testing.T) {
 		plan := utils.MonthlyExpensesPlan{
-			YearsUntilRetirement:    0,
 			ExpectedMonthlyExpenses: 3000,
 			Age:                     30,
 			RetirementAge:           60,
@@ -147,7 +145,6 @@ func TestCalculateMonthlySavings(t *testing.T) {
 
 	t.Run("negative years until retirement", func(t *testing.T) {
 		plan := utils.MonthlyExpensesPlan{
-			YearsUntilRetirement:    -5,
 			ExpectedMonthlyExpenses: 3000,
 			Age:                     30,
 			RetirementAge:           60,
@@ -168,8 +165,7 @@ func TestCalculateMonthlyExpenses(t *testing.T) {
 			CurrentMoney: 60000,
 		}
 
-		expenses, err := utils.CalculateMonthlyExpenses(&asset)
-		assert.NoError(t, err)
+		expenses := utils.CalculateMonthlyExpenses(&asset)
 		assert.Equal(t, float64(0), expenses)
 	})
 
@@ -183,8 +179,7 @@ func TestCalculateMonthlyExpenses(t *testing.T) {
 			UpdatedAt:    now,
 		}
 
-		expenses, err := utils.CalculateMonthlyExpenses(&asset)
-		assert.NoError(t, err)
+		expenses := utils.CalculateMonthlyExpenses(&asset)
 		assert.Greater(t, expenses, float64(0))
 	})
 
@@ -198,8 +193,7 @@ func TestCalculateMonthlyExpenses(t *testing.T) {
 			UpdatedAt:    now,
 		}
 
-		expenses, err := utils.CalculateMonthlyExpenses(&asset)
-		assert.NoError(t, err)
+		expenses := utils.CalculateMonthlyExpenses(&asset)
 		assert.Equal(t, float64(0), expenses)
 	})
 }

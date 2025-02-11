@@ -268,8 +268,17 @@ func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHou
 			return nil, err
 		}
 
-		house.MonthlyExpenses = monthlyExpenses
-		house.LastCalculatedMonth = currentMonth
+		requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * house.NursingHouse.Price
+		if float64(requiredMoney) > user.House.CurrentMoney {
+			house.Status = "In_Progress"
+			house.MonthlyExpenses = monthlyExpenses
+			house.LastCalculatedMonth = currentMonth
+		} else {
+			house.Status = "Completed"
+			house.MonthlyExpenses = 0
+			house.LastCalculatedMonth = 0
+		}
+
 		_, err = u.userrepo.UpdateSelectedHouse(house)
 		if err != nil {
 			return nil, err
@@ -349,13 +358,15 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 			return nil, err
 		}
 
-		selectedHouse.MonthlyExpenses = monthlyExpenses
-		selectedHouse.LastCalculatedMonth = currentMonth
 		requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * nursingHouse.Price
 		if float64(requiredMoney) > user.House.CurrentMoney {
 			selectedHouse.Status = "In_Progress"
+			selectedHouse.MonthlyExpenses = monthlyExpenses
+			selectedHouse.LastCalculatedMonth = currentMonth
 		} else {
 			selectedHouse.Status = "Completed"
+			selectedHouse.MonthlyExpenses = 0
+			selectedHouse.LastCalculatedMonth = 0
 		}
 	} else {
 		if selectedHouse.LastCalculatedMonth != currentMonth {
@@ -369,13 +380,15 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 				return nil, err
 			}
 
-			selectedHouse.MonthlyExpenses = monthlyExpenses
-			selectedHouse.LastCalculatedMonth = currentMonth
 			requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
 			if float64(requiredMoney) > user.House.CurrentMoney {
 				selectedHouse.Status = "In_Progress"
+				selectedHouse.MonthlyExpenses = monthlyExpenses
+				selectedHouse.LastCalculatedMonth = currentMonth
 			} else {
 				selectedHouse.Status = "Completed"
+				selectedHouse.MonthlyExpenses = 0
+				selectedHouse.LastCalculatedMonth = 0
 			}
 		}
 	}
@@ -488,7 +501,6 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		return nil, err
 	}
 
-	yearsUntilRetirement := plan.RetirementAge - age
 	allCostAsset, err := utils.CalculateAllAssetsMonthlyExpenses(user)
 	if err != nil {
 		return fiber.Map{}, err
@@ -509,7 +521,6 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		Age:                     age,
 		RetirementAge:           plan.RetirementAge,
 		ExpectLifespan:          plan.ExpectLifespan,
-		YearsUntilRetirement:    yearsUntilRetirement,
 		AllCostAsset:            allCostAsset,
 		NursingHousePrice:       nursingHousePrice,
 	}
@@ -637,6 +648,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
 					if user.House.CurrentMoney >= float64(requiredMoney) {
 						user.House.Status = "Completed"
+						user.House.MonthlyExpenses = 0
+						user.House.LastCalculatedMonth = 0
 						notification := &entities.Notification{
 							ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), validHouse.NursingHouse.Name),
 							UserID:    user.ID,
@@ -670,6 +683,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
 					if user.House.CurrentMoney >= float64(requiredMoney) {
 						user.House.Status = "Completed"
+						user.House.MonthlyExpenses = 0
+						user.House.LastCalculatedMonth = 0
 					}
 				} else {
 					return nil, errors.New("cannot update completed nursing house")
@@ -685,6 +700,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					asset.CurrentMoney += history.Money
 					if asset.CurrentMoney >= asset.TotalCost {
 						asset.Status = "Completed"
+						asset.MonthlyExpenses = 0
+						asset.LastCalculatedMonth = 0
 					}
 
 					_, err = u.assetrepo.UpdateAssetByID(asset)
@@ -746,10 +763,6 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					}
 
 					asset.CurrentMoney -= history.Money
-					if asset.CurrentMoney >= asset.TotalCost {
-						asset.Status = "Completed"
-					}
-
 					_, err = u.assetrepo.UpdateAssetByID(asset)
 					if err != nil {
 						return nil, err

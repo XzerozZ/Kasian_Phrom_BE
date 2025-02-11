@@ -52,11 +52,7 @@ func (u *AssetUseCaseImpl) CreateAsset(asset entities.Asset) (*entities.Asset, e
 		return nil, errors.New("end year must be greater than or equal to current year")
 	}
 
-	monthlyExpenses, err := utils.CalculateMonthlyExpenses(&asset)
-	if err != nil {
-		return nil, err
-	}
-
+	monthlyExpenses := utils.CalculateMonthlyExpenses(&asset)
 	asset.ID = id
 	asset.MonthlyExpenses = monthlyExpenses
 	asset.LastCalculatedMonth = currentMonth
@@ -103,14 +99,12 @@ func (u *AssetUseCaseImpl) GetAssetByUserID(userID string) ([]entities.Asset, er
 		}
 
 		if assets[i].LastCalculatedMonth != currentMonth {
-			newMonthlyExpenses, err := utils.CalculateMonthlyExpenses(&assets[i])
-			if err == nil {
-				assets[i].MonthlyExpenses = newMonthlyExpenses
-				assets[i].LastCalculatedMonth = currentMonth
-				_, err = u.assetrepo.UpdateAssetByID(&assets[i])
-				if err != nil {
-					return nil, err
-				}
+			newMonthlyExpenses := utils.CalculateMonthlyExpenses(&assets[i])
+			assets[i].MonthlyExpenses = newMonthlyExpenses
+			assets[i].LastCalculatedMonth = currentMonth
+			_, err = u.assetrepo.UpdateAssetByID(&assets[i])
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
@@ -135,10 +129,7 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 
 	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 	if existingAsset.LastCalculatedMonth != currentMonth || existingAsset.TotalCost != asset.TotalCost {
-		monthlyExpenses, err := utils.CalculateMonthlyExpenses(existingAsset)
-		if err != nil {
-			return nil, err
-		}
+		monthlyExpenses := utils.CalculateMonthlyExpenses(existingAsset)
 		existingAsset.MonthlyExpenses = monthlyExpenses
 		existingAsset.LastCalculatedMonth = currentMonth
 	}
@@ -151,6 +142,15 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 	existingAsset.LastCalculatedMonth = currentMonth
 	if endYear <= currentYear {
 		existingAsset.Status = "Paused"
+		message := fmt.Sprintf("สินทรัพย์ '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", existingAsset.Name)
+		notification := &entities.Notification{
+			ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), existingAsset.Name),
+			UserID:    existingAsset.UserID,
+			Message:   message,
+			CreatedAt: time.Now(),
+		}
+
+		_ = u.notirepo.CreateNotification(notification)
 	} else {
 		if existingAsset.TotalCost <= existingAsset.CurrentMoney {
 			existingAsset.Status = "Completed"

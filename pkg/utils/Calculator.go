@@ -16,7 +16,6 @@ type MonthlyExpensesPlan struct {
 	Age                     int
 	RetirementAge           int
 	ExpectLifespan          int
-	YearsUntilRetirement    int
 	AllCostAsset            float64
 	NursingHousePrice       float64
 }
@@ -81,7 +80,8 @@ func CalculateMonthlySavings(plan MonthlyExpensesPlan) (float64, error) {
 		return 0, err
 	}
 
-	monthsUntilRetirement := plan.YearsUntilRetirement * 12
+	yearsUntilRetirement := plan.RetirementAge - plan.Age
+	monthsUntilRetirement := yearsUntilRetirement * 12
 	if monthsUntilRetirement <= 0 {
 		return 0, errors.New("years until retirement must be greater than zero")
 	}
@@ -92,38 +92,29 @@ func CalculateMonthlySavings(plan MonthlyExpensesPlan) (float64, error) {
 	return monthlySavings, nil
 }
 
-func CalculateMonthlyExpenses(asset *entities.Asset) (float64, error) {
+func CalculateMonthlyExpenses(asset *entities.Asset) float64 {
 	if asset.Status == "Completed" {
-		return 0, nil
+		return 0
 	}
 
 	endYear, err := strconv.Atoi(asset.EndYear)
 	if err != nil {
-		return 0, err
+		return 0
 	}
 
 	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
-	if endYear < currentYear {
-		return 0, errors.New("end year must be greater than current year")
-	}
-
 	remainingMonths := (endYear-currentYear-1)*12 + (12 - currentMonth + 1)
 	remainingCost := asset.TotalCost - asset.CurrentMoney
 	monthlyExpenses := remainingCost / float64(remainingMonths)
 	monthlyExpenses = math.Round(monthlyExpenses)
-	return monthlyExpenses, nil
+	return monthlyExpenses
 }
 
 func CalculateAllAssetsMonthlyExpenses(user *entities.User) (float64, error) {
 	var total float64
 	for _, asset := range user.Assets {
 		if asset.Status == "In_Progress" {
-			monthlyExpense, err := CalculateMonthlyExpenses(&asset)
-			if err != nil {
-				return 0, err
-			}
-
-			total += monthlyExpense
+			total += asset.MonthlyExpenses
 		}
 	}
 

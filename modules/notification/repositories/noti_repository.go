@@ -25,8 +25,11 @@ func (r *GormNotiRepository) CreateNotification(notification *entities.Notificat
 
 func (r *GormNotiRepository) GetNotificationsByUserID(userID string) ([]entities.Notification, error) {
 	var notifications []entities.Notification
-	err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&notifications).Error
-	return notifications, err
+	if err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&notifications).Error; err != nil {
+		return nil, err
+	}
+
+	return notifications, nil
 }
 
 func (r *GormNotiRepository) MarkNotificationAsRead(userID string) error {
