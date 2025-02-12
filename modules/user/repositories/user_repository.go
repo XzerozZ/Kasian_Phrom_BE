@@ -80,7 +80,7 @@ func (r *GormUserRepository) FindUserByEmail(email string) (entities.User, error
 
 func (r *GormUserRepository) GetUserByID(id string) (*entities.User, error) {
 	var user entities.User
-	err := r.db.Preload("Quiz.Risk").Preload("Role").Preload("Assets").Preload("House.NursingHouse.Images").Where("id = ?", id).First(&user).Error
+	err := r.db.Preload("Quiz.Risk").Preload("Role").Preload("Assets").Preload("RetirementPlan").Preload("House.NursingHouse.Images").Where("id = ?", id).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
