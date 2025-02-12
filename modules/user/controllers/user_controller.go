@@ -5,7 +5,6 @@ import (
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
-	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -489,26 +488,11 @@ func (c *UserController) GetUserByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	age, err := utils.CalculateAge(data.RetirementPlan.BirthDate)
-	if err != nil {
-		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      fiber.ErrNotFound.Message,
-			"status_code": fiber.ErrNotFound.Code,
-			"message":     err.Error(),
-			"result":      nil,
-		})
-	}
-
-	response := fiber.Map{
-		"data": data,
-		"age":  age,
-	}
-
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "User Info retrieved successfully",
-		"result":      response,
+		"result":      data,
 	})
 }
 
