@@ -36,7 +36,7 @@ func (u *AssetUseCaseImpl) CreateNotification(userID, assetName string) error {
 	notification := &entities.Notification{
 		ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assetName),
 		UserID:    userID,
-		Message:   fmt.Sprintf("สินทรัพย์ '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assetName),
+		Message:   fmt.Sprintf("ทรัพย์สิน '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assetName),
 		CreatedAt: time.Now(),
 	}
 	return u.notirepo.CreateNotification(notification)
@@ -90,8 +90,11 @@ func (u *AssetUseCaseImpl) CreateAsset(asset entities.Asset) (*entities.Asset, e
 	}
 
 	asset.ID = id
-	asset.MonthlyExpenses = utils.CalculateMonthlyExpenses(&asset, currentYear, currentMonth)
+	asset.Status = "In_Progress"
+	monthlyExpenses := utils.CalculateMonthlyExpenses(&asset, currentYear, currentMonth)
+	asset.MonthlyExpenses = monthlyExpenses
 	asset.LastCalculatedMonth = currentMonth
+
 	return u.assetrepo.CreateAsset(&asset)
 }
 

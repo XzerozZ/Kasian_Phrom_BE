@@ -89,7 +89,7 @@ func (c *UserController) RegisterHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
-		"message":     "๊user created successfully",
+		"message":     "user created successfully",
 		"result":      data,
 	})
 }

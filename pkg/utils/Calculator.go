@@ -98,10 +98,6 @@ func CalculateMonthlyExpenses(asset *entities.Asset, currentYear, currentMonth i
 		return 0
 	}
 
-	if remainingMonths <= 0 {
-		return 0
-	}
-
 	remainingCost := asset.TotalCost - asset.CurrentMoney
 	return math.Round(remainingCost / float64(remainingMonths))
 }

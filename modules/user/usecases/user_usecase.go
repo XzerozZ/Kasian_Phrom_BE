@@ -331,6 +331,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 			return nil, err
 		}
 
+		selectedHouse.Status = "In_Progress"
 		nursingHouse, err := u.nhrepo.GetNhByID(nursingHouseID)
 		if err != nil {
 			return nil, err
