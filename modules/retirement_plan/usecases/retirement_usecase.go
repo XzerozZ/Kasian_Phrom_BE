@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"errors"
+	"time"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
@@ -30,7 +31,13 @@ func NewRetirementUseCase(retirerepo repositories.RetirementRepository, userusec
 }
 
 func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementPlan) (*entities.RetirementPlan, int, error) {
+	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 	age, err := utils.CalculateAge(retirement.BirthDate)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	planAge, err := utils.CalculateRetirementPlanAge(retirement.BirthDate, time.Now())
 	if err != nil {
 		return nil, 0, err
 	}
@@ -87,8 +94,21 @@ func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementP
 		return nil, 0, errors.New("retirementAge must be less than ExpectLifespan")
 	}
 
+	requiredFunds, err := utils.CalculateRetirementFunds(&retirement, planAge)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	monthlySavings, err := utils.CalculateMonthlySavings(&retirement, planAge, currentYear, currentMonth)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	retirement.ID = uuid.New().String()
 	retirement.Status = "In_Progress"
+	retirement.LastCalculatedMonth = currentMonth
+	retirement.LastRequiredFunds = requiredFunds
+	retirement.LastMonthlyExpenses = monthlySavings
 	createdRetire, err := u.retirerepo.CreateRetirement(&retirement)
 	if err != nil {
 		return nil, 0, err
@@ -111,8 +131,7 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(userID string, retirement e
 		return nil, err
 	}
 
-	currentTotalMoney := existingRetirement.CurrentSavings + existingRetirement.CurrentTotalInvestment
-	age, err := utils.CalculateAge(retirement.BirthDate)
+	age, err := utils.CalculateRetirementPlanAge(retirement.BirthDate, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -161,6 +180,18 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(userID string, retirement e
 		return nil, errors.New("retirementAge must be less than ExpectLifespan")
 	}
 
+	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
+	needsRecalculation := false
+	recalculateFunds := false
+	if existingRetirement.ExpectLifespan != retirement.ExpectLifespan || existingRetirement.RetirementAge != retirement.RetirementAge || existingRetirement.ExpectedMonthlyExpenses != retirement.ExpectedMonthlyExpenses || existingRetirement.ExpectedInflation != retirement.ExpectedInflation {
+		recalculateFunds = true
+		needsRecalculation = true
+	}
+
+	if currentMonth != existingRetirement.LastCalculatedMonth {
+		needsRecalculation = true
+	}
+
 	existingRetirement.BirthDate = retirement.BirthDate
 	existingRetirement.ExpectLifespan = retirement.ExpectLifespan
 	existingRetirement.RetirementAge = retirement.RetirementAge
@@ -174,22 +205,30 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(userID string, retirement e
 	existingRetirement.AnnualExpenseIncrease = retirement.AnnualExpenseIncrease
 	existingRetirement.AnnualSavingsReturn = retirement.AnnualSavingsReturn
 	existingRetirement.AnnualInvestmentReturn = retirement.AnnualInvestmentReturn
-	retirementData, err := u.userusecase.CalculateRetirement(userID)
-	if err != nil {
-		return nil, err
+	if needsRecalculation {
+		if recalculateFunds {
+			requiredFunds, err := utils.CalculateRetirementFunds(existingRetirement, age)
+			if err != nil {
+				return nil, err
+			}
+			existingRetirement.LastRequiredFunds = requiredFunds
+		}
+
+		monthlySavings, err := utils.CalculateMonthlySavings(existingRetirement, age, currentYear, currentMonth)
+		if err != nil {
+			return nil, err
+		}
+
+		existingRetirement.LastCalculatedMonth = currentMonth
+		existingRetirement.LastMonthlyExpenses = monthlySavings
+		currentTotalMoney := existingRetirement.CurrentSavings + existingRetirement.CurrentTotalInvestment
+		if currentTotalMoney >= existingRetirement.LastRequiredFunds {
+			existingRetirement.Status = "Completed"
+			existingRetirement.LastMonthlyExpenses = 0
+		} else {
+			existingRetirement.Status = "In_Progress"
+		}
 	}
 
-	allRequiredFund := retirementData["allRequiredFund"].(float64)
-	if currentTotalMoney >= allRequiredFund {
-		existingRetirement.Status = "Completed"
-	} else {
-		existingRetirement.Status = "In_Progress"
-	}
-
-	updatedRetirement, err := u.retirerepo.UpdateRetirementPlan(existingRetirement)
-	if err != nil {
-		return nil, err
-	}
-
-	return updatedRetirement, nil
+	return u.retirerepo.UpdateRetirementPlan(existingRetirement)
 }

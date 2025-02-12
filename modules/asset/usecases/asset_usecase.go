@@ -32,12 +32,44 @@ func NewAssetUseCase(assetrepo repositories.AssetRepository, notirepo notiReposi
 	}
 }
 
-func (u *AssetUseCaseImpl) CreateAsset(asset entities.Asset) (*entities.Asset, error) {
-	id, err := u.assetrepo.GetAssetNextID()
+func (u *AssetUseCaseImpl) CreateNotification(userID, assetName string) error {
+	notification := &entities.Notification{
+		ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assetName),
+		UserID:    userID,
+		Message:   fmt.Sprintf("สินทรัพย์ '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assetName),
+		CreatedAt: time.Now(),
+	}
+	return u.notirepo.CreateNotification(notification)
+}
+
+func (u *AssetUseCaseImpl) UpdateAssetStatus(asset *entities.Asset, currentYear int) error {
+	endYear, err := strconv.Atoi(asset.EndYear)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
+	if endYear <= currentYear {
+		asset.Status = "Paused"
+		asset.LastCalculatedMonth = 0
+		asset.MonthlyExpenses = 0
+		return u.CreateNotification(asset.UserID, asset.Name)
+	}
+
+	if asset.Status == "Paused" {
+		asset.LastCalculatedMonth = 0
+		asset.MonthlyExpenses = 0
+		return nil
+	}
+
+	if asset.TotalCost <= asset.CurrentMoney {
+		asset.Status = "Completed"
+	} else {
+		asset.Status = "In_Progress"
+	}
+	return nil
+}
+
+func (u *AssetUseCaseImpl) CreateAsset(asset entities.Asset) (*entities.Asset, error) {
 	if asset.TotalCost <= 0 {
 		return nil, errors.New("totalcost must be greater than zero")
 	}
@@ -48,20 +80,19 @@ func (u *AssetUseCaseImpl) CreateAsset(asset entities.Asset) (*entities.Asset, e
 	}
 
 	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
-	if endYear < currentYear {
+	if endYear <= currentYear {
 		return nil, errors.New("end year must be greater than or equal to current year")
 	}
 
-	monthlyExpenses := utils.CalculateMonthlyExpenses(&asset)
-	asset.ID = id
-	asset.MonthlyExpenses = monthlyExpenses
-	asset.LastCalculatedMonth = currentMonth
-	createdAsset, err := u.assetrepo.CreateAsset(&asset)
+	id, err := u.assetrepo.GetAssetNextID()
 	if err != nil {
 		return nil, err
 	}
 
-	return createdAsset, nil
+	asset.ID = id
+	asset.MonthlyExpenses = utils.CalculateMonthlyExpenses(&asset, currentYear, currentMonth)
+	asset.LastCalculatedMonth = currentMonth
+	return u.assetrepo.CreateAsset(&asset)
 }
 
 func (u *AssetUseCaseImpl) GetAssetByID(id string) (*entities.Asset, error) {
@@ -76,34 +107,14 @@ func (u *AssetUseCaseImpl) GetAssetByUserID(userID string) ([]entities.Asset, er
 
 	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 	for i := range assets {
-		endYear, err := strconv.Atoi(assets[i].EndYear)
-		if err != nil {
+		if err := u.UpdateAssetStatus(&assets[i], currentYear); err != nil {
 			return nil, err
 		}
 
-		if assets[i].Status != "completed" && endYear <= currentYear {
-			assets[i].Status = "paused"
-			message := fmt.Sprintf("สินทรัพย์ '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assets[i].Name)
-			notification := &entities.Notification{
-				ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assets[i].ID),
-				UserID:    userID,
-				Message:   message,
-				CreatedAt: time.Now(),
-			}
-
-			_ = u.notirepo.CreateNotification(notification)
-			_, err := u.assetrepo.UpdateAssetByID(&assets[i])
-			if err != nil {
-				return nil, err
-			}
-		}
-
 		if assets[i].LastCalculatedMonth != currentMonth {
-			newMonthlyExpenses := utils.CalculateMonthlyExpenses(&assets[i])
-			assets[i].MonthlyExpenses = newMonthlyExpenses
+			assets[i].MonthlyExpenses = utils.CalculateMonthlyExpenses(&assets[i], currentYear, currentMonth)
 			assets[i].LastCalculatedMonth = currentMonth
-			_, err = u.assetrepo.UpdateAssetByID(&assets[i])
-			if err != nil {
+			if _, err = u.assetrepo.UpdateAssetByID(&assets[i]); err != nil {
 				return nil, err
 			}
 		}
@@ -122,60 +133,36 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 		return nil, errors.New("totalcost must be greater than zero")
 	}
 
-	endYear, err := strconv.Atoi(asset.EndYear)
-	if err != nil {
-		return nil, err
-	}
-
 	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
-	if existingAsset.LastCalculatedMonth != currentMonth || existingAsset.TotalCost != asset.TotalCost {
-		monthlyExpenses := utils.CalculateMonthlyExpenses(existingAsset)
-		existingAsset.MonthlyExpenses = monthlyExpenses
-		existingAsset.LastCalculatedMonth = currentMonth
-	}
-
+	totalCostChanged := existingAsset.TotalCost != asset.TotalCost
 	existingAsset.TotalCost = asset.TotalCost
 	existingAsset.Name = asset.Name
 	existingAsset.Type = asset.Type
 	existingAsset.EndYear = asset.EndYear
 	existingAsset.Status = asset.Status
 	existingAsset.LastCalculatedMonth = currentMonth
-	if endYear <= currentYear {
-		existingAsset.Status = "Paused"
-		message := fmt.Sprintf("สินทรัพย์ '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", existingAsset.Name)
-		notification := &entities.Notification{
-			ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), existingAsset.Name),
-			UserID:    existingAsset.UserID,
-			Message:   message,
-			CreatedAt: time.Now(),
-		}
-
-		_ = u.notirepo.CreateNotification(notification)
+	if asset.Status == "Paused" {
+		existingAsset.LastCalculatedMonth = 0
+		existingAsset.MonthlyExpenses = 0
 	} else {
-		if existingAsset.TotalCost <= existingAsset.CurrentMoney {
-			existingAsset.Status = "Completed"
-		} else {
-			existingAsset.Status = "In_Progress"
+		if err := u.UpdateAssetStatus(existingAsset, currentYear); err != nil {
+			return nil, err
+		}
+
+		if totalCostChanged || existingAsset.LastCalculatedMonth != currentMonth {
+			existingAsset.LastCalculatedMonth = currentMonth
+			existingAsset.MonthlyExpenses = utils.CalculateMonthlyExpenses(existingAsset, currentYear, currentMonth)
 		}
 	}
 
-	updatedAsset, err := u.assetrepo.UpdateAssetByID(existingAsset)
-	if err != nil {
-		return nil, err
-	}
-
-	return updatedAsset, nil
+	return u.assetrepo.UpdateAssetByID(existingAsset)
 }
 
 func (u *AssetUseCaseImpl) DeleteAssetByID(id string) error {
-	existingAsset, err := u.assetrepo.GetAssetByID(id)
+	asset, err := u.assetrepo.GetAssetByID(id)
 	if err != nil {
 		return err
 	}
 
-	if err := u.assetrepo.DeleteAssetByID(existingAsset.ID); err != nil {
-		return err
-	}
-
-	return nil
+	return u.assetrepo.DeleteAssetByID(asset.ID)
 }

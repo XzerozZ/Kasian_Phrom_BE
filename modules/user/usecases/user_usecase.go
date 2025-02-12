@@ -68,6 +68,13 @@ func NewUserUseCase(userrepo repositories.UserRepository, retirementrepo retirem
 	}
 }
 
+const (
+	defaultHouseID   = "00001"
+	dateLayout       = "02-01-2006"
+	statusCompleted  = "Completed"
+	statusInProgress = "In_Progress"
+)
+
 func (u *UserUseCaseImpl) Register(user *entities.User, roleName string) (*entities.User, error) {
 	normalizedEmail, err := utils.NormalizeEmail(user.Email)
 	if err != nil {
@@ -248,13 +255,10 @@ func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHou
 	}
 
 	currentMonth := int(time.Now().Month())
-	if house.NursingHouseID == "00001" {
+	if house.NursingHouseID == defaultHouseID {
 		house.MonthlyExpenses = 0
 		house.LastCalculatedMonth = 0
-		_, err = u.userrepo.UpdateSelectedHouse(house)
-		if err != nil {
-			return nil, err
-		}
+		return u.userrepo.UpdateSelectedHouse(house)
 	}
 
 	if house.LastCalculatedMonth != currentMonth {
@@ -263,26 +267,8 @@ func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHou
 			return nil, err
 		}
 
-		monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user)
-		if err != nil {
-			return nil, err
-		}
-
-		requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * house.NursingHouse.Price
-		if float64(requiredMoney) > user.House.CurrentMoney {
-			house.Status = "In_Progress"
-			house.MonthlyExpenses = monthlyExpenses
-			house.LastCalculatedMonth = currentMonth
-		} else {
-			house.Status = "Completed"
-			house.MonthlyExpenses = 0
-			house.LastCalculatedMonth = 0
-		}
-
-		_, err = u.userrepo.UpdateSelectedHouse(house)
-		if err != nil {
-			return nil, err
-		}
+		house.Status, house.MonthlyExpenses, house.LastCalculatedMonth = u.CalculateHouseStatus(user, float64(house.NursingHouse.Price))
+		return u.userrepo.UpdateSelectedHouse(house)
 	}
 
 	return house, nil
@@ -294,12 +280,6 @@ func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *mu
 		return nil, err
 	}
 
-	normalizedEmail, err := utils.NormalizeEmail(user.Email)
-	if err != nil {
-		return nil, errors.New("invalid email format")
-	}
-
-	existingUser.Email = normalizedEmail
 	existingUser.Firstname = user.Firstname
 	existingUser.Lastname = user.Lastname
 	existingUser.Username = user.Username
@@ -336,13 +316,16 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 		return nil, err
 	}
 
-	currentMonth := int(time.Now().Month())
-	selectedHouse.NursingHouseID = nursingHouseID
-	if nursingHouseID == "00001" {
-		selectedHouse.Status = "Completed"
+	if nursingHouseID == defaultHouseID {
+		selectedHouse.NursingHouseID = nursingHouseID
+		selectedHouse.Status = statusCompleted
 		selectedHouse.LastCalculatedMonth = 0
 		selectedHouse.MonthlyExpenses = 0
-	} else if nursingHouseID != selectedHouse.NursingHouseID {
+		return u.userrepo.UpdateSelectedHouse(selectedHouse)
+	}
+
+	if nursingHouseID != selectedHouse.NursingHouseID ||
+		selectedHouse.LastCalculatedMonth != int(time.Now().Month()) {
 		user, err := u.userrepo.GetUserByID(userID)
 		if err != nil {
 			return nil, err
@@ -353,52 +336,11 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 			return nil, err
 		}
 
-		monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user)
-		if err != nil {
-			return nil, err
-		}
-
-		requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * nursingHouse.Price
-		if float64(requiredMoney) > user.House.CurrentMoney {
-			selectedHouse.Status = "In_Progress"
-			selectedHouse.MonthlyExpenses = monthlyExpenses
-			selectedHouse.LastCalculatedMonth = currentMonth
-		} else {
-			selectedHouse.Status = "Completed"
-			selectedHouse.MonthlyExpenses = 0
-			selectedHouse.LastCalculatedMonth = 0
-		}
-	} else {
-		if selectedHouse.LastCalculatedMonth != currentMonth {
-			user, err := u.userrepo.GetUserByID(userID)
-			if err != nil {
-				return nil, err
-			}
-
-			monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user)
-			if err != nil {
-				return nil, err
-			}
-
-			requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
-			if float64(requiredMoney) > user.House.CurrentMoney {
-				selectedHouse.Status = "In_Progress"
-				selectedHouse.MonthlyExpenses = monthlyExpenses
-				selectedHouse.LastCalculatedMonth = currentMonth
-			} else {
-				selectedHouse.Status = "Completed"
-				selectedHouse.MonthlyExpenses = 0
-				selectedHouse.LastCalculatedMonth = 0
-			}
-		}
+		selectedHouse.NursingHouseID = nursingHouseID
+		selectedHouse.Status, selectedHouse.MonthlyExpenses, selectedHouse.LastCalculatedMonth = u.CalculateHouseStatus(user, float64(nursingHouse.Price))
 	}
 
-	updatedHouse, err := u.userrepo.UpdateSelectedHouse(selectedHouse)
-	if err != nil {
-		return nil, err
-	}
-
-	return updatedHouse, nil
+	return u.userrepo.UpdateSelectedHouse(selectedHouse)
 }
 
 func (u *UserUseCaseImpl) ForgotPassword(email string) error {
@@ -495,51 +437,74 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 	}
 
 	plan := user.RetirementPlan
-	expectedMonthlyExpenses := plan.ExpectedMonthlyExpenses
+	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 	age, err := utils.CalculateRetirementPlanAge(plan.BirthDate, plan.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	allCostAsset, err := utils.CalculateAllAssetsMonthlyExpenses(user)
-	if err != nil {
-		return fiber.Map{}, err
-	}
-
-	nursingHousePrice := 0.0
-	cost := user.House.CurrentMoney
-	if user.House.NursingHouse.ID != "" && user.House.Status != "Completed" {
-		nursingHousePrice = float64(user.House.NursingHouse.Price)
-	} else if user.House.Status == "Completed" {
-		cost = float64((plan.ExpectLifespan - plan.RetirementAge) * 12 * user.House.NursingHouse.Price)
-	}
-
-	monthlyPlan := utils.MonthlyExpensesPlan{
-		ExpectedMonthlyExpenses: expectedMonthlyExpenses,
-		AnnualExpenseIncrease:   plan.AnnualExpenseIncrease,
-		ExpectedInflation:       plan.ExpectedInflation,
-		Age:                     age,
-		RetirementAge:           plan.RetirementAge,
-		ExpectLifespan:          plan.ExpectLifespan,
-		AllCostAsset:            allCostAsset,
-		NursingHousePrice:       nursingHousePrice,
-	}
-
-	requiredFunds := 0.0
-	if plan.Status != "Completed" {
-		requiredFunds, err = utils.CalculateMonthlySavings(monthlyPlan)
-		if err != nil {
-			return fiber.Map{}, err
+	var allAssetsExpense, allTotalCost float64
+	assetSavingsforAll := utils.CalculateAllAssetSavings(user, "All")
+	assetSavingsforPlan := utils.CalculateAllAssetSavings(user, "Plan")
+	for _, asset := range user.Assets {
+		allTotalCost += asset.TotalCost
+		if asset.LastCalculatedMonth == currentMonth {
+			allAssetsExpense += asset.MonthlyExpenses
+		} else if asset.LastCalculatedMonth != currentMonth {
+			asset.MonthlyExpenses = utils.CalculateMonthlyExpenses(&asset, currentYear, currentMonth)
+			asset.LastCalculatedMonth = currentMonth
+			allAssetsExpense += asset.MonthlyExpenses
+			_, err := u.assetrepo.UpdateAssetByID(&asset)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	requiredAllFunds, err := utils.CalculateRetirementFunds(monthlyPlan)
-	if err != nil {
-		return fiber.Map{}, err
+	var nursingHousePrice float64
+	cost := user.House.CurrentMoney
+	if user.House.Status == "Completed" {
+		cost = float64((plan.ExpectLifespan - plan.RetirementAge) * 12 * user.House.NursingHouse.Price)
 	}
 
-	assetSavingsforAll := utils.CalculateAllAssetSavings(user, "All")
-	assetSavingsforPlan := utils.CalculateAllAssetSavings(user, "Plan")
+	if user.House.LastCalculatedMonth == currentMonth {
+		nursingHousePrice = user.House.MonthlyExpenses
+	} else if user.House.LastCalculatedMonth != currentMonth {
+		nursingHousePrice, err = utils.CalculateNursingHouseMonthlyExpense(user, currentYear, currentMonth)
+		if err != nil {
+			return nil, err
+		}
+
+		user.House.MonthlyExpenses = nursingHousePrice
+		user.House.LastCalculatedMonth = currentMonth
+		_, err = u.userrepo.UpdateSelectedHouse(&user.House)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var planExpense float64
+	if plan.LastCalculatedMonth == currentMonth {
+		planExpense = plan.LastMonthlyExpenses
+	} else if plan.LastCalculatedMonth != currentMonth {
+		planExpense, err := utils.CalculateMonthlySavings(&plan, age, currentYear, currentMonth)
+		if err != nil {
+			return nil, err
+		}
+
+		plan.MonthlyExpenses = planExpense
+		plan.LastCalculatedMonth = currentMonth
+		_, err = u.retirementrepo.UpdateRetirementPlan(&plan)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	moneyForPlan := plan.CurrentSavings + plan.CurrentTotalInvestment
+	if moneyForPlan >= plan.LastRequiredFunds {
+		moneyForPlan = plan.LastRequiredFunds
+	}
+
 	currentMonthStart := time.Now().Truncate(24*time.Hour).AddDate(0, 0, -time.Now().Day()+1)
 	currentMonthEnd := currentMonthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
 	deposits, err := u.userrepo.GetUserDepositsInRange(userID, currentMonthStart, currentMonthEnd)
@@ -552,30 +517,26 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		totalDeposits += history.Money
 	}
 
-	moneyForPlan := plan.CurrentSavings + plan.CurrentTotalInvestment
-	if moneyForPlan >= requiredAllFunds {
-		moneyForPlan = requiredAllFunds
-	}
-
-	adjustedMonthlyExpenses := requiredFunds - totalDeposits // เดือนนี้เหลือเท่าไร
-	totalNursingHouseCost := float64((plan.ExpectLifespan-plan.RetirementAge)*12*user.House.NursingHouse.Price) - user.House.CurrentMoney
-	allRequiredFund := requiredAllFunds + allCostAsset + totalNursingHouseCost
-	allSavingforPlan := moneyForPlan + plan.CurrentSavings + assetSavingsforPlan + cost
-	allSavingforAll := plan.CurrentSavings + assetSavingsforAll + user.House.CurrentMoney // เงินออม
-	allMoney := allSavingforAll + plan.CurrentTotalInvestment                             // เงินสุทธิ
-	stillNeed := allRequiredFund - allSavingforPlan                                       // เงินที่ต้องเก็บอีก
+	totalNursingHouseCost := float64((plan.ExpectLifespan - plan.RetirementAge) * 12 * user.House.NursingHouse.Price)
+	allRequiredFund := plan.LastRequiredFunds + totalNursingHouseCost + allTotalCost
+	adjustedMonthlyExpenses := (planExpense + nursingHousePrice + allAssetsExpense) - totalDeposits
+	savingforPlan := moneyForPlan + assetSavingsforPlan + cost
+	savingforAll := assetSavingsforAll + user.House.CurrentMoney + plan.CurrentSavings
+	allMoney := savingforAll + plan.CurrentTotalInvestment
+	stillNeed := allRequiredFund - savingforPlan
 	response := fiber.Map{
 		"plan_name":                plan.PlanName,
-		"allRequiredFund":          math.Round(allRequiredFund),
-		"stillneed":                math.Round(stillNeed),
-		"allretirementfund":        math.Round(requiredAllFunds),
-		"monthly_expenses":         math.Round(adjustedMonthlyExpenses),
-		"plan_saving":              math.Round(plan.CurrentSavings),
-		"all_money":                math.Round(allMoney),
-		"saving":                   math.Round(allSavingforAll),
-		"investment":               math.Round(plan.CurrentTotalInvestment),
-		"totalHouseCost":           math.Round(totalNursingHouseCost),
-		"totalAssetCost":           math.Round(allCostAsset),
+		"allRequiredFund":          math.Round(allRequiredFund),             //จำนวนเงินที่ต้องการทั้งหมด
+		"stillneed":                math.Round(stillNeed),                   //ขาดอีก
+		"allretirementfund":        math.Round(plan.LastRequiredFunds),      //เงินเกษียณที่ต้องการทั้งหมด
+		"monthly_expenses":         math.Round(adjustedMonthlyExpenses),     //เงินที่ต้องผ่อนเดือนนี้ทั้งหมด - เงินที่เก็บเดือนนี้ทั้งหมด
+		"plan_saving":              math.Round(plan.CurrentSavings),         //เงินออมของแผน
+		"all_money":                math.Round(allMoney),                    //เงินสุทธิ
+		"saving":                   math.Round(savingforAll),                //เงินออมทั้งหมด
+		"investment":               math.Round(plan.CurrentTotalInvestment), //เงินลงทุน
+		"all_assets_expense":       math.Round(allAssetsExpense),            //ราคาบ้านพักต่อเดือน
+		"nursingHouse_expense":     math.Round(nursingHousePrice),           //ราคาของทรัพย์สินที่ต้องผ่อนต่อเดือนทั้งหมด
+		"plan_expense":             math.Round(planExpense),
 		"annual_savings_return":    plan.AnnualSavingsReturn,
 		"annual_investment_return": plan.AnnualInvestmentReturn,
 	}
@@ -848,4 +809,19 @@ func (u *UserUseCaseImpl) GetHistoryByMonth(userID string) (map[string]float64, 
 	}
 
 	return historyByMonth, nil
+}
+
+func (u *UserUseCaseImpl) CalculateHouseStatus(user *entities.User, nursingHousePrice float64) (string, float64, int) {
+	currentYear, currentMonth := time.Now().Month(), int(time.Now().Month())
+	monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user, int(currentYear), currentMonth)
+	if err != nil {
+		return statusInProgress, 0, 0
+	}
+
+	requiredMoney := float64((user.RetirementPlan.ExpectLifespan-user.RetirementPlan.RetirementAge)*12) * nursingHousePrice
+	if requiredMoney > user.House.CurrentMoney {
+		return statusInProgress, monthlyExpenses, currentMonth
+	}
+
+	return statusCompleted, 0, 0
 }
