@@ -35,10 +35,6 @@ func (u *LoanUseCaseImpl) CreateLoan(loan entities.Loan) (*entities.Loan, error)
 		return nil, errors.New("monthly expense must be greater than zero")
 	}
 
-	if loan.InterestPercentage <= 0 {
-		return nil, errors.New("interest percentage must be greater than zero")
-	}
-
 	if loan.RemainingMonths <= 0 {
 		return nil, errors.New("remaining months must be greater than zero")
 	}

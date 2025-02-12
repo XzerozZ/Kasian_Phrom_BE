@@ -3,7 +3,6 @@ package controllers
 import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/usecases"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
-	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -77,26 +76,11 @@ func (c *AssetController) GetAssetByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	monthlyExpenses, err := utils.CalculateMonthlyExpenses(data)
-	if err != nil {
-		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"status":      fiber.ErrInternalServerError.Message,
-			"status_code": fiber.ErrInternalServerError.Code,
-			"message":     err.Error(),
-			"result":      nil,
-		})
-	}
-
-	response := fiber.Map{
-		"asset":            data,
-		"monthly_expenses": monthlyExpenses,
-	}
-
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "Asset retrieved successfully",
-		"result":      response,
+		"result":      data,
 	})
 }
 
@@ -113,15 +97,6 @@ func (c *AssetController) GetAssetByUserIDHandler(ctx *fiber.Ctx) error {
 
 	assets, err := c.assetusecase.GetAssetByUserID(userID)
 	if err != nil {
-		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      fiber.ErrNotFound.Message,
-			"status_code": fiber.ErrNotFound.Code,
-			"message":     err.Error(),
-			"result":      nil,
-		})
-	}
-
-	if len(assets) == 0 {
 		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"status":      "Not Found",
 			"status_code": fiber.StatusNotFound,
@@ -130,31 +105,11 @@ func (c *AssetController) GetAssetByUserIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	var assetsWithExpenses []fiber.Map
-	for _, asset := range assets {
-		monthlyExpenses, err := utils.CalculateMonthlyExpenses(&asset)
-		if err != nil {
-			return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-				"status":      fiber.ErrInternalServerError.Message,
-				"status_code": fiber.ErrInternalServerError.Code,
-				"message":     err.Error(),
-				"result":      nil,
-			})
-		}
-
-		assetResponse := fiber.Map{
-			"asset":            asset,
-			"monthly_expenses": monthlyExpenses,
-		}
-
-		assetsWithExpenses = append(assetsWithExpenses, assetResponse)
-	}
-
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "Asset retrieved successfully",
-		"result":      assetsWithExpenses,
+		"result":      assets,
 	})
 }
 

@@ -533,16 +533,11 @@ func (c *UserController) GetSelectedHouseHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	response := fiber.Map{
-		"selected":         selectedHouse,
-		"monthly_expenses": selectedHouse.NursingHouse.Price,
-	}
-
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "Selected house retrieved successfully",
-		"result":      response,
+		"result":      selectedHouse,
 	})
 }
 
