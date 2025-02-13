@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/usecases"
@@ -191,6 +192,15 @@ func (c *AssetController) DeleteAssetByIDHandler(ctx *fiber.Ctx) error {
 	types := form.Value["type"]
 	names := form.Value["name"]
 	amounts := form.Value["amount"]
+	if len(types) == 0 || len(names) == 0 || len(amounts) == 0 {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Missing required fields: 'type', 'name', or 'amount'",
+			"result":      nil,
+		})
+	}
+
 	if len(types) != len(names) || len(types) != len(amounts) {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":      fiber.ErrBadRequest.Message,
@@ -200,6 +210,7 @@ func (c *AssetController) DeleteAssetByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
+	transfers = make([]entities.TransferRequest, 0, len(types))
 	for i := 0; i < len(types); i++ {
 		amount, err := strconv.ParseFloat(amounts[i], 64)
 		if err != nil {
@@ -207,6 +218,15 @@ func (c *AssetController) DeleteAssetByIDHandler(ctx *fiber.Ctx) error {
 				"status":      "Error",
 				"status_code": fiber.StatusBadRequest,
 				"message":     "Invalid amount format, must be a valid float64",
+				"result":      nil,
+			})
+		}
+
+		if amount < 0 {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":      "Error",
+				"status_code": fiber.StatusBadRequest,
+				"message":     fmt.Sprintf("Amount cannot be negative at index %d: %f", i, amount),
 				"result":      nil,
 			})
 		}

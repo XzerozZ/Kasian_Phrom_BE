@@ -208,7 +208,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					notification := &entities.Notification{
 						ID:        uuid.New().String(),
 						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", asset.Name),
+						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", selectedItem.Name),
 						CreatedAt: time.Now(),
 					}
 
