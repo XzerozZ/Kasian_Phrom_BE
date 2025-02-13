@@ -160,6 +160,16 @@ func (c *LoanController) UpdateLoanStatusByIDHandler(ctx *fiber.Ctx) error {
 
 func (c *LoanController) DeleteLoanHandler(ctx *fiber.Ctx) error {
 	id := ctx.Params("id")
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
 	if err := c.loanusecase.DeleteLoanByID(id); err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":      "Error",

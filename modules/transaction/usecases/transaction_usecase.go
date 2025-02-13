@@ -72,9 +72,9 @@ func (u *TransactionUseCaseImpl) CreateTransactionsForAllUsers() error {
 		}
 
 		transactionStatus := "ชำระ"
-		if loan.Status == "paused" {
+		if loan.Status == "Paused" {
 			transactionStatus = "หยุดพัก"
-		} else if loan.Status == "in_progress" {
+		} else if loan.Status == "In_Progress" {
 			transactionStatus = "ชำระ"
 		}
 

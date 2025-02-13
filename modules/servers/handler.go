@@ -187,7 +187,7 @@ func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	loanGroup.Get("/:id", loanController.GetLoanByIDHandler)
 	loanGroup.Get("/", middlewares.JWTMiddleware(jwt), loanController.GetLoanByUserIDHandler)
 	loanGroup.Put("/:id/status", middlewares.JWTMiddleware(jwt), loanController.UpdateLoanStatusByIDHandler)
-	loanGroup.Delete("/:id", loanController.DeleteLoanHandler)
+	loanGroup.Delete("/:id", middlewares.JWTMiddleware(jwt), loanController.DeleteLoanHandler)
 }
 
 func setupQuizRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
