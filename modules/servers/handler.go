@@ -54,19 +54,12 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
 
-	userRepository := userRepositories.NewGormUserRepository(db)
-	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
-	nhRepository := nhRepositories.NewGormNhRepository(db)
-	notiRepository := notiRepositories.NewGormNotiRepository(db)
-	assetRepository := assetRepositories.NewGormAssetRepository(db)
-	userUseCase := userUseCases.NewUserUseCase(userRepository, retirementRepository, assetRepository, notiRepository, nhRepository, jwt, supa, mail)
-
 	setupNursingHouseRoutes(app, db, supa)
 	SetupNewsRoutes(app, db, supa)
 	setupFavoriteRoutes(app, jwt, db)
 	setupAssetRoutes(app, jwt, db)
 	setupUserRoutes(app, db, jwt, supa, mail)
-	setupRetirementRoutes(app, jwt, userUseCase, db)
+	setupRetirementRoutes(app, jwt, db)
 	setupLoanRoutes(app, jwt, db)
 	setupQuizRoutes(app, jwt, db)
 	setupNotiRoutes(app, jwt, db)
@@ -171,7 +164,7 @@ func setupAssetRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	assetGroup.Delete("/:id", assetController.DeleteAssetByIDHandler)
 }
 
-func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, userUseCase userUseCases.UserUseCase, db *gorm.DB) {
+func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
 	retirementUseCase := retirementUseCases.NewRetirementUseCase(retirementRepository)
 	retirementController := retirementControllers.NewRetirementController(retirementUseCase)
