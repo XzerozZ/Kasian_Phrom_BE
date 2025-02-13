@@ -37,7 +37,7 @@ type UserUseCase interface {
 	CalculateRetirement(userID string) (fiber.Map, error)
 
 	GetSelectedHouse(userID string) (*entities.SelectedHouse, error)
-	UpdateSelectedHouse(userID, nursingHouseID string) (*entities.SelectedHouse, error)
+	UpdateSelectedHouse(userID, nursingHouseID string, transfers []entities.TransferRequest) (*entities.SelectedHouse, error)
 
 	CreateHistory(history entities.History) (*entities.History, error)
 	GetHistoryByUserID(userID string) (fiber.Map, error)
@@ -267,7 +267,14 @@ func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHou
 			return nil, err
 		}
 
-		house.Status, house.MonthlyExpenses, house.LastCalculatedMonth = u.CalculateHouseStatus(user, float64(house.NursingHouse.Price))
+		currentYear, currentMonth := time.Now().Month(), int(time.Now().Month())
+		monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user, float64(house.NursingHouse.Price), int(currentYear), currentMonth)
+		if err != nil {
+			return nil, err
+		}
+
+		house.MonthlyExpenses = monthlyExpenses
+		house.LastCalculatedMonth = currentMonth
 		return u.userrepo.UpdateSelectedHouse(house)
 	}
 
@@ -310,8 +317,13 @@ func (u *UserUseCaseImpl) UpdateUserByID(id string, user entities.User, file *mu
 	return updatedUser, nil
 }
 
-func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*entities.SelectedHouse, error) {
+func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, transfers []entities.TransferRequest) (*entities.SelectedHouse, error) {
 	selectedHouse, err := u.userrepo.GetSelectedHouse(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := u.userrepo.GetUserByID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -321,23 +333,90 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string) (*e
 		selectedHouse.Status = statusCompleted
 		selectedHouse.LastCalculatedMonth = 0
 		selectedHouse.MonthlyExpenses = 0
-		return u.userrepo.UpdateSelectedHouse(selectedHouse)
-	}
-
-	if nursingHouseID != selectedHouse.NursingHouseID ||
-		selectedHouse.LastCalculatedMonth != int(time.Now().Month()) {
-		user, err := u.userrepo.GetUserByID(userID)
-		if err != nil {
-			return nil, err
+		totalTransfer := 0.0
+		for _, transfer := range transfers {
+			totalTransfer += transfer.Amount
 		}
 
+		if totalTransfer > selectedHouse.CurrentMoney {
+			return nil, errors.New("transfer amount exceeds asset's current money")
+		}
+
+		for _, transfer := range transfers {
+			switch transfer.Type {
+			case "asset":
+				selectedItem, err := u.assetrepo.FindAssetByNameandUserID(transfer.Name, userID)
+				if err != nil {
+					return nil, err
+				}
+
+				if selectedItem.Status == "In_Progress" {
+					selectedItem.CurrentMoney += transfer.Amount
+					if selectedItem.CurrentMoney >= selectedItem.TotalCost {
+						selectedItem.Status = "Completed"
+						selectedItem.MonthlyExpenses = 0
+						selectedItem.LastCalculatedMonth = 0
+						notification := &entities.Notification{
+							ID:        uuid.New().String(),
+							UserID:    user.ID,
+							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", selectedItem.Name),
+							CreatedAt: time.Now(),
+						}
+
+						_ = u.notirepo.CreateNotification(notification)
+					}
+
+					_, err = u.assetrepo.UpdateAssetByID(selectedItem)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					return nil, errors.New("cannot update completed or paused asset")
+				}
+
+			case "retirementplan":
+				user.RetirementPlan.CurrentSavings += transfer.Amount
+				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+				if allMoney >= user.RetirementPlan.LastRequiredFunds {
+					user.RetirementPlan.Status = "Completed"
+					user.RetirementPlan.LastMonthlyExpenses = 0
+					user.RetirementPlan.LastMonthlyExpenses = 0
+					notification := &entities.Notification{
+						ID:        uuid.New().String(),
+						UserID:    user.ID,
+						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+						CreatedAt: time.Now(),
+					}
+
+					_ = u.notirepo.CreateNotification(notification)
+				}
+
+			default:
+				continue
+			}
+		}
+	}
+
+	if nursingHouseID != selectedHouse.NursingHouseID || selectedHouse.LastCalculatedMonth != int(time.Now().Month()) {
 		nursingHouse, err := u.nhrepo.GetNhByID(nursingHouseID)
 		if err != nil {
 			return nil, err
 		}
 
+		currentYear, currentMonth := time.Now().Month(), int(time.Now().Month())
+		selectedHouse.Status = "In_Progress"
+		monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user, float64(nursingHouse.Price), int(currentYear), currentMonth)
+		if err != nil {
+			return nil, err
+		}
+
+		selectedHouse.MonthlyExpenses = monthlyExpenses
 		selectedHouse.NursingHouseID = nursingHouseID
-		selectedHouse.Status, selectedHouse.MonthlyExpenses, selectedHouse.LastCalculatedMonth = u.CalculateHouseStatus(user, float64(nursingHouse.Price))
+		selectedHouse.LastCalculatedMonth = currentMonth
+		requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * nursingHouse.Price
+		if float64(requiredMoney) < user.House.CurrentMoney {
+			selectedHouse.Status = statusCompleted
+		}
 	}
 
 	return u.userrepo.UpdateSelectedHouse(selectedHouse)
@@ -470,7 +549,7 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 	if user.House.LastCalculatedMonth == currentMonth {
 		nursingHousePrice = user.House.MonthlyExpenses
 	} else if user.House.LastCalculatedMonth != currentMonth {
-		nursingHousePrice, err = utils.CalculateNursingHouseMonthlyExpense(user, currentYear, currentMonth)
+		nursingHousePrice, err = utils.CalculateNursingHouseMonthlyExpense(user, float64(user.House.NursingHouse.Price), currentYear, currentMonth)
 		if err != nil {
 			return nil, err
 		}
@@ -554,11 +633,6 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 		return nil, errors.New("money must be greater than zero")
 	}
 
-	retirementData, err := u.CalculateRetirement(history.UserID)
-	if err != nil {
-		return nil, err
-	}
-
 	history.ID = uuid.New().String()
 	history.TrackDate = time.Now()
 	switch history.Method {
@@ -589,16 +663,18 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					validAssets[i].CurrentMoney += amounts
 					if validAssets[i].CurrentMoney >= validAssets[i].TotalCost {
 						validAssets[i].Status = "Completed"
+						validAssets[i].MonthlyExpenses = 0
+						validAssets[i].LastCalculatedMonth = 0
+						notification := &entities.Notification{
+							ID:        uuid.New().String(),
+							UserID:    user.ID,
+							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", validAssets[i].Name),
+							CreatedAt: time.Now(),
+						}
+
+						_ = u.notirepo.CreateNotification(notification)
 					}
 
-					notification := &entities.Notification{
-						ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), validAssets[i].ID),
-						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", validAssets[i].Name),
-						CreatedAt: time.Now(),
-					}
-
-					_ = u.notirepo.CreateNotification(notification)
 					if _, err := u.assetrepo.UpdateAssetByID(&validAssets[i]); err != nil {
 						return nil, err
 					}
@@ -612,7 +688,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						user.House.MonthlyExpenses = 0
 						user.House.LastCalculatedMonth = 0
 						notification := &entities.Notification{
-							ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), validHouse.NursingHouse.Name),
+							ID:        uuid.New().String(),
 							UserID:    user.ID,
 							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก : '%s' ได้เสร็จสิ้นแล้ว", validHouse.NursingHouse.Name),
 							CreatedAt: time.Now(),
@@ -624,18 +700,36 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				}
 
 				user.RetirementPlan.CurrentSavings += amounts
-				allRequiredFund := retirementData["allretirementfund"].(float64)
 				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-				if allMoney >= allRequiredFund {
+				if allMoney >= user.RetirementPlan.LastRequiredFunds {
 					user.RetirementPlan.Status = "Completed"
+					user.RetirementPlan.LastMonthlyExpenses = 0
+					user.RetirementPlan.LastMonthlyExpenses = 0
+					notification := &entities.Notification{
+						ID:        uuid.New().String(),
+						UserID:    user.ID,
+						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", validHouse.NursingHouse.Name),
+						CreatedAt: time.Now(),
+					}
+
+					_ = u.notirepo.CreateNotification(notification)
 				}
 
 			case "retirementplan":
 				user.RetirementPlan.CurrentSavings += history.Money
-				allRequiredFund := retirementData["allretirementfund"].(float64)
 				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-				if allMoney >= allRequiredFund {
+				if allMoney >= user.RetirementPlan.LastRequiredFunds {
 					user.RetirementPlan.Status = "Completed"
+					user.RetirementPlan.LastMonthlyExpenses = 0
+					user.RetirementPlan.LastMonthlyExpenses = 0
+					notification := &entities.Notification{
+						ID:        uuid.New().String(),
+						UserID:    user.ID,
+						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+						CreatedAt: time.Now(),
+					}
+
+					_ = u.notirepo.CreateNotification(notification)
 				}
 
 			case "house":
@@ -646,6 +740,14 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						user.House.Status = "Completed"
 						user.House.MonthlyExpenses = 0
 						user.House.LastCalculatedMonth = 0
+						notification := &entities.Notification{
+							ID:        uuid.New().String(),
+							UserID:    user.ID,
+							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก : '%s' ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
+							CreatedAt: time.Now(),
+						}
+
+						_ = u.notirepo.CreateNotification(notification)
 					}
 				} else {
 					return nil, errors.New("cannot update completed nursing house")
@@ -663,6 +765,14 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						asset.Status = "Completed"
 						asset.MonthlyExpenses = 0
 						asset.LastCalculatedMonth = 0
+						notification := &entities.Notification{
+							ID:        uuid.New().String(),
+							UserID:    user.ID,
+							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", asset.Name),
+							CreatedAt: time.Now(),
+						}
+
+						_ = u.notirepo.CreateNotification(notification)
 					}
 
 					_, err = u.assetrepo.UpdateAssetByID(asset)
@@ -678,10 +788,19 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 			}
 		} else if history.Type == "investment" {
 			user.RetirementPlan.CurrentTotalInvestment += history.Money
-			allRequiredFund := retirementData["allretirementfund"].(float64)
 			allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-			if allMoney >= allRequiredFund {
+			if allMoney >= user.RetirementPlan.LastRequiredFunds {
 				user.RetirementPlan.Status = "Completed"
+				user.RetirementPlan.LastMonthlyExpenses = 0
+				user.RetirementPlan.LastMonthlyExpenses = 0
+				notification := &entities.Notification{
+					ID:        uuid.New().String(),
+					UserID:    user.ID,
+					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+					CreatedAt: time.Now(),
+				}
+
+				_ = u.notirepo.CreateNotification(notification)
 			}
 		}
 
@@ -694,10 +813,19 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				}
 
 				user.RetirementPlan.CurrentSavings -= history.Money
-				allRequiredFund := retirementData["allretirementfund"].(float64)
 				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-				if allMoney >= allRequiredFund {
+				if allMoney >= user.RetirementPlan.LastRequiredFunds {
 					user.RetirementPlan.Status = "Completed"
+					user.RetirementPlan.LastMonthlyExpenses = 0
+					user.RetirementPlan.LastMonthlyExpenses = 0
+					notification := &entities.Notification{
+						ID:        uuid.New().String(),
+						UserID:    user.ID,
+						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+						CreatedAt: time.Now(),
+					}
+
+					_ = u.notirepo.CreateNotification(notification)
 				} else {
 					user.RetirementPlan.Status = "In_Progress"
 				}
@@ -741,10 +869,19 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 			}
 
 			user.RetirementPlan.CurrentTotalInvestment -= history.Money
-			allRequiredFund := retirementData["allretirementfund"].(float64)
 			allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-			if allMoney >= allRequiredFund {
+			if allMoney >= user.RetirementPlan.LastRequiredFunds {
 				user.RetirementPlan.Status = "Completed"
+				user.RetirementPlan.LastMonthlyExpenses = 0
+				user.RetirementPlan.LastMonthlyExpenses = 0
+				notification := &entities.Notification{
+					ID:        uuid.New().String(),
+					UserID:    user.ID,
+					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+					CreatedAt: time.Now(),
+				}
+
+				_ = u.notirepo.CreateNotification(notification)
 			} else {
 				user.RetirementPlan.Status = "In_Progress"
 			}
@@ -809,19 +946,4 @@ func (u *UserUseCaseImpl) GetHistoryByMonth(userID string) (map[string]float64, 
 	}
 
 	return historyByMonth, nil
-}
-
-func (u *UserUseCaseImpl) CalculateHouseStatus(user *entities.User, nursingHousePrice float64) (string, float64, int) {
-	currentYear, currentMonth := time.Now().Month(), int(time.Now().Month())
-	monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user, int(currentYear), currentMonth)
-	if err != nil {
-		return statusInProgress, 0, 0
-	}
-
-	requiredMoney := float64((user.RetirementPlan.ExpectLifespan-user.RetirementPlan.RetirementAge)*12) * nursingHousePrice
-	if requiredMoney > user.House.CurrentMoney {
-		return statusInProgress, monthlyExpenses, currentMonth
-	}
-
-	return statusCompleted, 0, 0
 }

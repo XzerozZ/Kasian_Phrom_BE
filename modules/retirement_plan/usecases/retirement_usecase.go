@@ -6,7 +6,6 @@ import (
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
-	userUsecase "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 	"github.com/google/uuid"
 )
@@ -19,15 +18,11 @@ type RetirementUseCase interface {
 }
 
 type RetirementUseCaseImpl struct {
-	retirerepo  repositories.RetirementRepository
-	userusecase userUsecase.UserUseCase
+	retirerepo repositories.RetirementRepository
 }
 
-func NewRetirementUseCase(retirerepo repositories.RetirementRepository, userusecase userUsecase.UserUseCase) *RetirementUseCaseImpl {
-	return &RetirementUseCaseImpl{
-		retirerepo:  retirerepo,
-		userusecase: userusecase,
-	}
+func NewRetirementUseCase(retirerepo repositories.RetirementRepository) *RetirementUseCaseImpl {
+	return &RetirementUseCaseImpl{retirerepo: retirerepo}
 }
 
 func (u *RetirementUseCaseImpl) CreateRetirement(retirement entities.RetirementPlan) (*entities.RetirementPlan, int, error) {

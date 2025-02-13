@@ -10,14 +10,14 @@ type User struct {
 	Email          string         `json:"email" gorm:"unique;not null"`
 	Password       string         `json:"-"`
 	Provider       string         `json:"provider" gorm:"not null"`
-	ImageLink      string         `json:"image_link"`
+	ImageLink      string         `json:"image_link" gorm:"default:https://mvfxlcnhrtduomirjeir.supabase.co/storage/v1/object/public/photos/seProfile/UserProfileDefault.jpg"`
 	RoleID         int            `json:"-" gorm:"not null"`
 	Role           Role           `json:"role" gorm:"foreignKey:RoleID"`
 	Favorites      []Favorite     `json:"favorites,omitempty" gorm:"foreignKey:UserID"`
 	Assets         []Asset        `json:"assets,omitempty" gorm:"foreignKey:UserID"`
 	Loans          []Loan         `json:"loans,omitempty" gorm:"foreignKey:UserID"`
 	House          SelectedHouse  `json:"house" gorm:"foreignKey:UserID"`
-	RetirementPlan RetirementPlan `json:"retirement" gorm:"foreignKey:UserID"`
+	RetirementPlan RetirementPlan `json:"retirement,omitempty" gorm:"foreignKey:UserID"`
 	Quiz           Quiz           `json:"risk" gorm:"foreignKey:UserID"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`

@@ -1,11 +1,12 @@
 package controllers
 
 import (
+	"fmt"
 	"mime/multipart"
+	"strconv"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/usecases"
-	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -90,7 +91,7 @@ func (c *UserController) RegisterHandler(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
-		"message":     "๊user created successfully",
+		"message":     "user created successfully",
 		"result":      data,
 	})
 }
@@ -225,13 +226,17 @@ func (c *UserController) LoginWithGoogleHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	if req.Firstname == "" || req.Lastname == "" || req.Username == "" || req.Email == "" || req.ImageLink == "" {
+	if req.Firstname == "" || req.Lastname == "" || req.Username == "" || req.Email == "" {
 		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
 			"status":      "Error",
 			"status_code": fiber.ErrBadRequest.Code,
 			"message":     "Firstname, Lastname, Username, Email or ImageLink is missing",
 			"result":      nil,
 		})
+	}
+
+	if req.ImageLink == "" {
+		req.ImageLink = "https://mvfxlcnhrtduomirjeir.supabase.co/storage/v1/object/public/photos/seProfile/UserProfileDefault.jpg"
 	}
 
 	user := &entities.User{
@@ -489,26 +494,11 @@ func (c *UserController) GetUserByIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	age, err := utils.CalculateAge(data.RetirementPlan.BirthDate)
-	if err != nil {
-		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      fiber.ErrNotFound.Message,
-			"status_code": fiber.ErrNotFound.Code,
-			"message":     err.Error(),
-			"result":      nil,
-		})
-	}
-
-	response := fiber.Map{
-		"data": data,
-		"age":  age,
-	}
-
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "User Info retrieved successfully",
-		"result":      response,
+		"result":      data,
 	})
 }
 
@@ -617,7 +607,67 @@ func (c *UserController) UpdateSelectedHouseHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	updatedHouse, err := c.userusecase.UpdateSelectedHouse(userID, nursingHouseID)
+	var transfers []entities.TransferRequest
+	if nursingHouseID == "00001" {
+		form, err := ctx.MultipartForm()
+		if err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":      "Error",
+				"status_code": fiber.StatusBadRequest,
+				"message":     "Invalid form data",
+				"result":      nil,
+			})
+		}
+
+		types, names, amounts := form.Value["type"], form.Value["name"], form.Value["amount"]
+		if len(types) == 0 || len(names) == 0 || len(amounts) == 0 {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":      "Error",
+				"status_code": fiber.StatusBadRequest,
+				"message":     "Missing required fields: 'type', 'name', or 'amount'",
+				"result":      nil,
+			})
+		}
+
+		if len(types) != len(names) || len(types) != len(amounts) {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":      "Error",
+				"status_code": fiber.StatusBadRequest,
+				"message":     "Mismatch in count of 'type', 'name', and 'amount'",
+				"result":      nil,
+			})
+		}
+
+		transfers = make([]entities.TransferRequest, 0, len(types))
+		for i := 0; i < len(types); i++ {
+			amount, err := strconv.ParseFloat(amounts[i], 64)
+			if err != nil {
+				return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"status":      "Error",
+					"status_code": fiber.StatusBadRequest,
+					"message":     fmt.Sprintf("Invalid amount format at index %d: %s", i, amounts[i]),
+					"result":      nil,
+				})
+			}
+
+			if amount < 0 {
+				return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"status":      "Error",
+					"status_code": fiber.StatusBadRequest,
+					"message":     fmt.Sprintf("Amount cannot be negative at index %d: %f", i, amount),
+					"result":      nil,
+				})
+			}
+
+			transfers = append(transfers, entities.TransferRequest{
+				Type:   types[i],
+				Name:   names[i],
+				Amount: amount,
+			})
+		}
+	}
+
+	updatedHouse, err := c.userusecase.UpdateSelectedHouse(userID, nursingHouseID, transfers)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      fiber.ErrNotFound.Message,

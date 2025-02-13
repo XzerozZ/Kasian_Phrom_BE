@@ -8,8 +8,12 @@ import (
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
-	notiRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
+	notiRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
+	nhRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
+	retirementRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
+	userRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
+	"github.com/google/uuid"
 )
 
 type AssetUseCase interface {
@@ -17,18 +21,24 @@ type AssetUseCase interface {
 	GetAssetByID(id string) (*entities.Asset, error)
 	GetAssetByUserID(userID string) ([]entities.Asset, error)
 	UpdateAssetByID(id string, asset entities.Asset) (*entities.Asset, error)
-	DeleteAssetByID(id string) error
+	DeleteAssetByID(id string, userID string, transfers []entities.TransferRequest) error
 }
 
 type AssetUseCaseImpl struct {
-	assetrepo repositories.AssetRepository
-	notirepo  notiRepositories.NotiRepository
+	assetrepo      repositories.AssetRepository
+	userrepo       userRepo.UserRepository
+	nhrepo         nhRepo.NhRepository
+	retirementrepo retirementRepo.RetirementRepository
+	notirepo       notiRepo.NotiRepository
 }
 
-func NewAssetUseCase(assetrepo repositories.AssetRepository, notirepo notiRepositories.NotiRepository) *AssetUseCaseImpl {
+func NewAssetUseCase(assetrepo repositories.AssetRepository, userrepo userRepo.UserRepository, nhrepo nhRepo.NhRepository, retirementrepo retirementRepo.RetirementRepository, notirepo notiRepo.NotiRepository) *AssetUseCaseImpl {
 	return &AssetUseCaseImpl{
-		assetrepo: assetrepo,
-		notirepo:  notirepo,
+		assetrepo:      assetrepo,
+		userrepo:       userrepo,
+		nhrepo:         nhrepo,
+		retirementrepo: retirementrepo,
+		notirepo:       notirepo,
 	}
 }
 
@@ -36,7 +46,7 @@ func (u *AssetUseCaseImpl) CreateNotification(userID, assetName string) error {
 	notification := &entities.Notification{
 		ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assetName),
 		UserID:    userID,
-		Message:   fmt.Sprintf("สินทรัพย์ '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assetName),
+		Message:   fmt.Sprintf("ทรัพย์สิน '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assetName),
 		CreatedAt: time.Now(),
 	}
 	return u.notirepo.CreateNotification(notification)
@@ -90,8 +100,11 @@ func (u *AssetUseCaseImpl) CreateAsset(asset entities.Asset) (*entities.Asset, e
 	}
 
 	asset.ID = id
-	asset.MonthlyExpenses = utils.CalculateMonthlyExpenses(&asset, currentYear, currentMonth)
+	asset.Status = "In_Progress"
+	monthlyExpenses := utils.CalculateMonthlyExpenses(&asset, currentYear, currentMonth)
+	asset.MonthlyExpenses = monthlyExpenses
 	asset.LastCalculatedMonth = currentMonth
+
 	return u.assetrepo.CreateAsset(&asset)
 }
 
@@ -158,11 +171,99 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 	return u.assetrepo.UpdateAssetByID(existingAsset)
 }
 
-func (u *AssetUseCaseImpl) DeleteAssetByID(id string) error {
+func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers []entities.TransferRequest) error {
 	asset, err := u.assetrepo.GetAssetByID(id)
 	if err != nil {
 		return err
 	}
 
+	user, err := u.userrepo.GetUserByID(userID)
+	if err != nil {
+		return err
+	}
+
+	totalTransfer := 0.0
+	for _, transfer := range transfers {
+		totalTransfer += transfer.Amount
+	}
+
+	if totalTransfer > asset.CurrentMoney {
+		return errors.New("transfer amount exceeds asset's current money")
+	}
+
+	for _, transfer := range transfers {
+		switch transfer.Type {
+		case "asset":
+			selectedItem, err := u.assetrepo.FindAssetByNameandUserID(transfer.Name, userID)
+			if err != nil {
+				return err
+			}
+
+			if selectedItem.Status == "In_Progress" {
+				selectedItem.CurrentMoney += transfer.Amount
+				if selectedItem.CurrentMoney >= selectedItem.TotalCost {
+					selectedItem.Status = "Completed"
+					selectedItem.MonthlyExpenses = 0
+					selectedItem.LastCalculatedMonth = 0
+					notification := &entities.Notification{
+						ID:        uuid.New().String(),
+						UserID:    user.ID,
+						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", selectedItem.Name),
+						CreatedAt: time.Now(),
+					}
+
+					_ = u.notirepo.CreateNotification(notification)
+				}
+
+				_, err = u.assetrepo.UpdateAssetByID(selectedItem)
+				if err != nil {
+					return err
+				}
+			} else {
+				return errors.New("cannot update completed or paused asset")
+			}
+
+		case "house":
+			if user.House.NursingHouseID != "00001" || user.House.Status != "Completed" {
+				user.House.CurrentMoney += transfer.Amount
+				requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
+				if user.House.CurrentMoney >= float64(requiredMoney) {
+					user.House.Status = "Completed"
+					user.House.MonthlyExpenses = 0
+					user.House.LastCalculatedMonth = 0
+					notification := &entities.Notification{
+						ID:        uuid.New().String(),
+						UserID:    user.ID,
+						Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก : '%s' ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
+						CreatedAt: time.Now(),
+					}
+
+					_ = u.notirepo.CreateNotification(notification)
+				}
+			} else {
+				return errors.New("cannot update completed nursing house")
+			}
+
+		case "retirementplan":
+			user.RetirementPlan.CurrentSavings += transfer.Amount
+			allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+			if allMoney >= user.RetirementPlan.LastRequiredFunds {
+				user.RetirementPlan.Status = "Completed"
+				user.RetirementPlan.LastMonthlyExpenses = 0
+				user.RetirementPlan.LastMonthlyExpenses = 0
+				notification := &entities.Notification{
+					ID:        uuid.New().String(),
+					UserID:    user.ID,
+					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+					CreatedAt: time.Now(),
+				}
+
+				_ = u.notirepo.CreateNotification(notification)
+			}
+
+		default:
+			continue
+		}
+	}
 	return u.assetrepo.DeleteAssetByID(asset.ID)
 }
