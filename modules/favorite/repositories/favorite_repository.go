@@ -44,7 +44,7 @@ func (r *GormFavRepository) CreateFav(fav *entities.Favorite) error {
 
 func (r *GormFavRepository) GetFavByUserID(userID string) ([]entities.Favorite, error) {
 	var favs []entities.Favorite
-	if err := r.db.Preload("NursingHouse").Where("user_id = ?", userID).First(&favs).Error; err != nil {
+	if err := r.db.Preload("NursingHouse.Images").Where("user_id = ?", userID).First(&favs).Error; err != nil {
 		return nil, err
 	}
 

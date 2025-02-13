@@ -156,8 +156,11 @@ func setupFavoriteRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 
 func setupAssetRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	assetRepository := assetRepositories.NewGormAssetRepository(db)
+	userRepository := userRepositories.NewGormUserRepository(db)
+	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
+	nhRepository := nhRepositories.NewGormNhRepository(db)
 	notiRepository := notiRepositories.NewGormNotiRepository(db)
-	assetUseCase := assetUseCases.NewAssetUseCase(assetRepository, notiRepository)
+	assetUseCase := assetUseCases.NewAssetUseCase(assetRepository, userRepository, nhRepository, retirementRepository, notiRepository)
 	assetController := assetControllers.NewAssetController(assetUseCase)
 
 	assetGroup := app.Group("/asset")
@@ -170,7 +173,7 @@ func setupAssetRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 
 func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, userUseCase userUseCases.UserUseCase, db *gorm.DB) {
 	retirementRepository := retirementRepositories.NewGormRetirementRepository(db)
-	retirementUseCase := retirementUseCases.NewRetirementUseCase(retirementRepository, userUseCase)
+	retirementUseCase := retirementUseCases.NewRetirementUseCase(retirementRepository)
 	retirementController := retirementControllers.NewRetirementController(retirementUseCase)
 
 	retirementGroup := app.Group("/retirement")

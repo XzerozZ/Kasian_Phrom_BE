@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"strconv"
+
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/asset/usecases"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 
@@ -165,7 +167,58 @@ func (c *AssetController) UpdateAssetByIDHandler(ctx *fiber.Ctx) error {
 
 func (c *AssetController) DeleteAssetByIDHandler(ctx *fiber.Ctx) error {
 	id := ctx.Params("id")
-	if err := c.assetusecase.DeleteAssetByID(id); err != nil {
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
+	form, err := ctx.MultipartForm()
+	if err != nil {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "invalid form data",
+			"result":      nil,
+		})
+	}
+
+	var transfers []entities.TransferRequest
+	types := form.Value["type"]
+	names := form.Value["name"]
+	amounts := form.Value["amount"]
+	if len(types) != len(names) || len(types) != len(amounts) {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     "Mismatch in count of 'type', 'name', and 'amount'",
+			"result":      nil,
+		})
+	}
+
+	for i := 0; i < len(types); i++ {
+		amount, err := strconv.ParseFloat(amounts[i], 64)
+		if err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"status":      "Error",
+				"status_code": fiber.StatusBadRequest,
+				"message":     "Invalid amount format, must be a valid float64",
+				"result":      nil,
+			})
+		}
+
+		transfers = append(transfers, entities.TransferRequest{
+			Type:   types[i],
+			Name:   names[i],
+			Amount: amount,
+		})
+	}
+
+	if err := c.assetusecase.DeleteAssetByID(id, userID, transfers); err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":      "Error",
 			"status_code": fiber.StatusInternalServerError,
