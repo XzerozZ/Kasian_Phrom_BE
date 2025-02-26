@@ -161,7 +161,7 @@ func setupAssetRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	assetGroup.Get("/:id", assetController.GetAssetByIDHandler)
 	assetGroup.Get("/", middlewares.JWTMiddleware(jwt), assetController.GetAssetByUserIDHandler)
 	assetGroup.Put("/:id", middlewares.JWTMiddleware(jwt), assetController.UpdateAssetByIDHandler)
-	assetGroup.Delete("/:id", assetController.DeleteAssetByIDHandler)
+	assetGroup.Delete("/:id", middlewares.JWTMiddleware(jwt), assetController.DeleteAssetByIDHandler)
 }
 
 func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {

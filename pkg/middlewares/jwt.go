@@ -3,8 +3,8 @@ package middlewares
 import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func JWTMiddleware(config configs.JWT) fiber.Handler {

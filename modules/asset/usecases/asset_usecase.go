@@ -224,13 +224,18 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 			}
 
 		case "house":
-			if user.House.NursingHouseID != "00001" || user.House.Status != "Completed" {
-				user.House.CurrentMoney += transfer.Amount
-				requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * user.House.NursingHouse.Price
-				if user.House.CurrentMoney >= float64(requiredMoney) {
-					user.House.Status = "Completed"
-					user.House.MonthlyExpenses = 0
-					user.House.LastCalculatedMonth = 0
+			house, err := u.userrepo.GetSelectedHouse(userID)
+			if err != nil {
+				return err
+			}
+
+			if house.NursingHouseID != "00001" || house.Status != "Completed" {
+				house.CurrentMoney += transfer.Amount
+				requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * house.NursingHouse.Price
+				if house.CurrentMoney >= float64(requiredMoney) {
+					house.Status = "Completed"
+					house.MonthlyExpenses = 0
+					house.LastCalculatedMonth = 0
 					notification := &entities.Notification{
 						ID:        uuid.New().String(),
 						UserID:    user.ID,
@@ -240,17 +245,27 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 
 					_ = u.notirepo.CreateNotification(notification)
 				}
+
+				_, err := u.userrepo.UpdateSelectedHouse(house)
+				if err != nil {
+					return err
+				}
 			} else {
 				return errors.New("cannot update completed nursing house")
 			}
 
 		case "retirementplan":
-			user.RetirementPlan.CurrentSavings += transfer.Amount
-			allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-			if allMoney >= user.RetirementPlan.LastRequiredFunds {
-				user.RetirementPlan.Status = "Completed"
-				user.RetirementPlan.LastMonthlyExpenses = 0
-				user.RetirementPlan.LastMonthlyExpenses = 0
+			retirement, err := u.retirementrepo.GetRetirementByUserID(userID)
+			if err != nil {
+				return err
+			}
+
+			retirement.CurrentSavings += transfer.Amount
+			allMoney := retirement.CurrentSavings + retirement.CurrentTotalInvestment
+			if allMoney >= retirement.LastRequiredFunds {
+				retirement.Status = "Completed"
+				retirement.LastMonthlyExpenses = 0
+				retirement.LastMonthlyExpenses = 0
 				notification := &entities.Notification{
 					ID:        uuid.New().String(),
 					UserID:    user.ID,
@@ -261,6 +276,10 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 				_ = u.notirepo.CreateNotification(notification)
 			}
 
+			_, err = u.retirementrepo.UpdateRetirementPlan(retirement)
+			if err != nil {
+				return err
+			}
 		default:
 			continue
 		}

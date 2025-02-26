@@ -267,7 +267,7 @@ func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHou
 			return nil, err
 		}
 
-		currentYear, currentMonth := time.Now().Month(), int(time.Now().Month())
+		currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 		monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user, float64(house.NursingHouse.Price), int(currentYear), currentMonth)
 		if err != nil {
 			return nil, err
@@ -375,12 +375,17 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 				}
 
 			case "retirementplan":
-				user.RetirementPlan.CurrentSavings += transfer.Amount
-				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-				if allMoney >= user.RetirementPlan.LastRequiredFunds {
-					user.RetirementPlan.Status = "Completed"
-					user.RetirementPlan.LastMonthlyExpenses = 0
-					user.RetirementPlan.LastMonthlyExpenses = 0
+				retirement, err := u.retirementrepo.GetRetirementByUserID(userID)
+				if err != nil {
+					return nil, err
+				}
+
+				retirement.CurrentSavings += transfer.Amount
+				allMoney := retirement.CurrentSavings + retirement.CurrentTotalInvestment
+				if allMoney >= retirement.LastRequiredFunds {
+					retirement.Status = "Completed"
+					retirement.LastMonthlyExpenses = 0
+					retirement.LastMonthlyExpenses = 0
 					notification := &entities.Notification{
 						ID:        uuid.New().String(),
 						UserID:    user.ID,
@@ -390,7 +395,10 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 
 					_ = u.notirepo.CreateNotification(notification)
 				}
-
+				_, err = u.retirementrepo.UpdateRetirementPlan(retirement)
+				if err != nil {
+					return nil, err
+				}
 			default:
 				continue
 			}
@@ -403,7 +411,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 			return nil, err
 		}
 
-		currentYear, currentMonth := time.Now().Month(), int(time.Now().Month())
+		currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 		selectedHouse.Status = "In_Progress"
 		monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user, float64(nursingHouse.Price), int(currentYear), currentMonth)
 		if err != nil {

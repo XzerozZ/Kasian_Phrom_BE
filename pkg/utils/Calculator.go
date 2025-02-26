@@ -138,10 +138,6 @@ func CalculateAllAssetSavings(user *entities.User, method string) float64 {
 }
 
 func CalculateNursingHouseMonthlyExpense(user *entities.User, nursingHousePrice float64, currentYear, currentMonth int) (float64, error) {
-	if user.House.Status != "In_Progress" {
-		return 0, nil
-	}
-
 	birthDate, err := time.Parse("02-01-2006", user.RetirementPlan.BirthDate)
 	if err != nil {
 		return 0, errors.New("invalid BirthDate format, expected DD-MM-YYYY")
@@ -154,8 +150,8 @@ func CalculateNursingHouseMonthlyExpense(user *entities.User, nursingHousePrice 
 		return 0, nil
 	}
 
-	totalCost := float64(user.RetirementPlan.ExpectLifespan-user.RetirementPlan.RetirementAge) * 12 * nursingHousePrice
-	remainingCost := float64(totalCost) - user.House.CurrentMoney
+	totalCost := float64((user.RetirementPlan.ExpectLifespan-user.RetirementPlan.RetirementAge)*12) * nursingHousePrice
+	remainingCost := totalCost - user.House.CurrentMoney
 	if remainingCost <= 0 {
 		return 0, nil
 	}
