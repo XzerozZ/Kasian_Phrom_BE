@@ -332,6 +332,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 		selectedHouse.NursingHouseID = nursingHouseID
 		selectedHouse.Status = statusCompleted
 		selectedHouse.LastCalculatedMonth = 0
+		selectedHouse.CurrentMoney = 0
 		selectedHouse.MonthlyExpenses = 0
 		totalTransfer := 0.0
 		for _, transfer := range transfers {
