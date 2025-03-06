@@ -14,6 +14,7 @@ import (
 	notiRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
 	nhRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 	retirementRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/socket"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 
@@ -365,6 +366,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
+						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 					}
 
 					_, err = u.assetrepo.UpdateAssetByID(selectedItem)
@@ -395,6 +397,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 					}
 
 					_ = u.notirepo.CreateNotification(notification)
+					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 				}
 				_, err = u.retirementrepo.UpdateRetirementPlan(retirement)
 				if err != nil {
@@ -682,6 +685,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
+						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 					}
 
 					if _, err := u.assetrepo.UpdateAssetByID(&validAssets[i]); err != nil {
@@ -704,6 +708,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
+						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 					}
 
 				}
@@ -722,6 +727,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					}
 
 					_ = u.notirepo.CreateNotification(notification)
+					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 				}
 
 			case "retirementplan":
@@ -739,6 +745,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					}
 
 					_ = u.notirepo.CreateNotification(notification)
+					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 				}
 
 			case "house":
@@ -757,6 +764,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
+						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 					}
 				} else {
 					return nil, errors.New("cannot update completed nursing house")
@@ -782,6 +790,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
+						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 					}
 
 					_, err = u.assetrepo.UpdateAssetByID(asset)
@@ -810,6 +819,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				}
 
 				_ = u.notirepo.CreateNotification(notification)
+				socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 			}
 		}
 
@@ -835,6 +845,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					}
 
 					_ = u.notirepo.CreateNotification(notification)
+					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 				} else {
 					user.RetirementPlan.Status = "In_Progress"
 				}
@@ -891,6 +902,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				}
 
 				_ = u.notirepo.CreateNotification(notification)
+				socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 			} else {
 				user.RetirementPlan.Status = "In_Progress"
 			}

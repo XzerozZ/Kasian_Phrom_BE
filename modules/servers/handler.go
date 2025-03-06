@@ -28,6 +28,7 @@ import (
 	retirementControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/controllers"
 	retirementRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
 	retirementUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/usecases"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/socket"
 	transControllers "github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/controllers"
 	transRepositories "github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/repositories"
 	transUseCases "github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/usecases"
@@ -39,6 +40,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/websocket/v2"
 	"gorm.io/gorm"
 )
 
@@ -63,7 +65,6 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 	setupLoanRoutes(app, jwt, db)
 	setupQuizRoutes(app, jwt, db)
 	setupNotiRoutes(app, jwt, db)
-	setupTransactionRoutes(app, jwt, db)
 
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.JSON(fiber.Map{
@@ -71,6 +72,8 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 			"message": "Welcome to the Nursing House System!",
 		})
 	})
+
+	app.Get("/ws", websocket.New(socket.WebSocketHandler))
 }
 
 func SetupNewsRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
@@ -178,9 +181,11 @@ func setupRetirementRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	loanRepository := loanRepositories.NewGormLoanRepository(db)
 	transRepository := transRepositories.NewGormTransRepository(db)
+	notiRepository := notiRepositories.NewGormNotiRepository(db)
 	loanUseCase := loanUseCases.NewLoanUseCase(loanRepository, transRepository)
-	transUseCase := transUseCases.NewTransactionUseCase(transRepository, loanRepository)
+	transUseCase := transUseCases.NewTransactionUseCase(transRepository, loanRepository, notiRepository)
 	loanController := loanControllers.NewLoanController(loanUseCase, transUseCase)
+	transController := transControllers.NewTransactionController(transUseCase)
 
 	loanGroup := app.Group("/loan")
 	loanGroup.Post("/", middlewares.JWTMiddleware(jwt), loanController.CreateLoanHandler)
@@ -188,6 +193,11 @@ func setupLoanRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	loanGroup.Get("/", middlewares.JWTMiddleware(jwt), loanController.GetLoanByUserIDHandler)
 	loanGroup.Put("/:id/status", middlewares.JWTMiddleware(jwt), loanController.UpdateLoanStatusByIDHandler)
 	loanGroup.Delete("/:id", middlewares.JWTMiddleware(jwt), loanController.DeleteLoanHandler)
+
+	transGroup := app.Group("/transaction")
+	transGroup.Post("/all", transController.CreateTransactionsForAllUsersHandler)
+	transGroup.Get("/", middlewares.JWTMiddleware(jwt), transController.GetTransactionByUserIDHandler)
+	transGroup.Put("/:id", middlewares.JWTMiddleware(jwt), transController.MarkTransactiontoPaidHandler)
 }
 
 func setupQuizRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
@@ -198,18 +208,6 @@ func setupQuizRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	quizGroup := app.Group("/quiz")
 	quizGroup.Post("/", middlewares.JWTMiddleware(jwt), quizController.CreateQuizHandler)
 	quizGroup.Get("/", middlewares.JWTMiddleware(jwt), quizController.GetQuizByUserIDHandler)
-}
-
-func setupTransactionRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
-	transRepository := transRepositories.NewGormTransRepository(db)
-	loanRepository := loanRepositories.NewGormLoanRepository(db)
-	transUseCase := transUseCases.NewTransactionUseCase(transRepository, loanRepository)
-	transController := transControllers.NewTransactionController(transUseCase)
-
-	transGroup := app.Group("/transaction")
-	transGroup.Post("/all", transController.CreateTransactionsForAllUsersHandler)
-	transGroup.Get("/", middlewares.JWTMiddleware(jwt), transController.GetTransactionByUserIDHandler)
-	transGroup.Put("/:id", middlewares.JWTMiddleware(jwt), transController.MarkTransactiontoPaidHandler)
 }
 
 func setupNotiRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {

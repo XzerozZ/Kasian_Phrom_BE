@@ -11,6 +11,7 @@ import (
 	notiRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
 	nhRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 	retirementRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/retirement_plan/repositories"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/socket"
 	userRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/user/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 	"github.com/google/uuid"
@@ -213,6 +214,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					}
 
 					_ = u.notirepo.CreateNotification(notification)
+					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 				}
 
 				_, err = u.assetrepo.UpdateAssetByID(selectedItem)
@@ -244,6 +246,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					}
 
 					_ = u.notirepo.CreateNotification(notification)
+					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 				}
 
 				_, err := u.userrepo.UpdateSelectedHouse(house)
@@ -274,6 +277,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 				}
 
 				_ = u.notirepo.CreateNotification(notification)
+				socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 			}
 
 			_, err = u.retirementrepo.UpdateRetirementPlan(retirement)

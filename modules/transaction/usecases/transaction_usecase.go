@@ -2,29 +2,34 @@ package usecases
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	loanRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/loan/repositories"
+	notiRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/socket"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/repositories"
 	"github.com/google/uuid"
 )
 
 type TransactionUseCase interface {
 	CreateTransactionsForAllUsers() error
-	MarkTransactiontoPaid(id string) error
+	MarkTransactiontoPaid(id, userID string) error
 	GetTransactionByUserID(userID string) ([]map[string]interface{}, error)
 }
 
 type TransactionUseCaseImpl struct {
 	transrepo repositories.TransRepository
 	loanrepo  loanRepo.LoanRepository
+	notirepo  notiRepo.NotiRepository
 }
 
-func NewTransactionUseCase(transrepo repositories.TransRepository, loanrepo loanRepo.LoanRepository) *TransactionUseCaseImpl {
+func NewTransactionUseCase(transrepo repositories.TransRepository, loanrepo loanRepo.LoanRepository, notirepo notiRepo.NotiRepository) *TransactionUseCaseImpl {
 	return &TransactionUseCaseImpl{
 		transrepo: transrepo,
 		loanrepo:  loanrepo,
+		notirepo:  notirepo,
 	}
 }
 
@@ -95,7 +100,7 @@ func (u *TransactionUseCaseImpl) CreateTransactionsForAllUsers() error {
 	return nil
 }
 
-func (u *TransactionUseCaseImpl) MarkTransactiontoPaid(id string) error {
+func (u *TransactionUseCaseImpl) MarkTransactiontoPaid(id, userID string) error {
 	transaction, err := u.transrepo.GetTransactionByID(id)
 	if err != nil {
 		return err
@@ -119,6 +124,15 @@ func (u *TransactionUseCaseImpl) MarkTransactiontoPaid(id string) error {
 		loan.RemainingMonths--
 		if loan.RemainingMonths == 0 {
 			loan.Status = "Completed"
+			notification := &entities.Notification{
+				ID:        uuid.New().String(),
+				UserID:    userID,
+				Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", loan.Name),
+				CreatedAt: time.Now(),
+			}
+
+			_ = u.notirepo.CreateNotification(notification)
+			socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 		}
 
 		if _, err := u.loanrepo.UpdateLoanByID(loan); err != nil {

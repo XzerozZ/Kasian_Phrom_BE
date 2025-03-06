@@ -42,7 +42,7 @@ func (c *TransactionController) MarkTransactiontoPaidHandler(ctx *fiber.Ctx) err
 		})
 	}
 
-	if err := c.transusecase.MarkTransactiontoPaid(transactionID); err != nil {
+	if err := c.transusecase.MarkTransactiontoPaid(transactionID, userID); err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":      "Internal Server Error",
 			"status_code": fiber.StatusInternalServerError,

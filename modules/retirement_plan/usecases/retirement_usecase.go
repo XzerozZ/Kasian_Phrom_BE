@@ -200,6 +200,7 @@ func (u *RetirementUseCaseImpl) UpdateRetirementByID(userID string, retirement e
 	existingRetirement.AnnualExpenseIncrease = retirement.AnnualExpenseIncrease
 	existingRetirement.AnnualSavingsReturn = retirement.AnnualSavingsReturn
 	existingRetirement.AnnualInvestmentReturn = retirement.AnnualInvestmentReturn
+	existingRetirement.CurrentTotalInvestment = retirement.CurrentTotalInvestment
 	if needsRecalculation {
 		if recalculateFunds {
 			requiredFunds, err := utils.CalculateRetirementFunds(existingRetirement, age)
