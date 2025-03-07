@@ -669,7 +669,15 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					count++
 				}
 
-				count++
+				var validPlan *entities.RetirementPlan
+				if user.RetirementPlan.Status != "Completed" {
+					validPlan = &user.RetirementPlan
+				}
+
+				if validPlan != nil {
+					count++
+				}
+
 				amounts := history.Money / float64(count)
 				for i := range validAssets {
 					validAssets[i].CurrentMoney += amounts
@@ -713,23 +721,24 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 
 				}
 
-				user.RetirementPlan.CurrentSavings += amounts
-				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-				if allMoney >= user.RetirementPlan.LastRequiredFunds {
-					user.RetirementPlan.Status = "Completed"
-					user.RetirementPlan.LastMonthlyExpenses = 0
-					user.RetirementPlan.LastMonthlyExpenses = 0
-					notification := &entities.Notification{
-						ID:        uuid.New().String(),
-						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", validHouse.NursingHouse.Name),
-						CreatedAt: time.Now(),
+				if validPlan != nil {
+					user.RetirementPlan.CurrentSavings += amounts
+					allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+					if allMoney >= user.RetirementPlan.LastRequiredFunds {
+						user.RetirementPlan.Status = "Completed"
+						user.RetirementPlan.LastMonthlyExpenses = 0
+						user.RetirementPlan.LastMonthlyExpenses = 0
+						notification := &entities.Notification{
+							ID:        uuid.New().String(),
+							UserID:    user.ID,
+							Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", validHouse.NursingHouse.Name),
+							CreatedAt: time.Now(),
+						}
+
+						_ = u.notirepo.CreateNotification(notification)
+						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 					}
-
-					_ = u.notirepo.CreateNotification(notification)
-					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 				}
-
 			case "retirementplan":
 				user.RetirementPlan.CurrentSavings += history.Money
 				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment

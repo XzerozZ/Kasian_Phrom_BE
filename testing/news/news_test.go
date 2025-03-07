@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// Mock NewsRepository
 type MockNewsRepository struct {
 	mock.Mock
 }
@@ -61,7 +60,6 @@ func (m *MockNewsRepository) DeleteDialog(id string) error {
 	return args.Error(0)
 }
 
-// Test CreateNews
 func TestCreateNews(t *testing.T) {
 	testCases := []struct {
 		name            string
@@ -114,7 +112,6 @@ func TestCreateNews(t *testing.T) {
 	}
 }
 
-// Test GetAllNews
 func TestGetAllNews(t *testing.T) {
 	testCases := []struct {
 		name            string
@@ -159,7 +156,6 @@ func TestGetAllNews(t *testing.T) {
 	}
 }
 
-// Test GetNewsByID
 func TestGetNewsByID(t *testing.T) {
 	testCases := []struct {
 		name            string
@@ -209,7 +205,6 @@ func TestGetNewsByID(t *testing.T) {
 	}
 }
 
-// Test UpdateNewsByID
 func TestUpdateNewsByID(t *testing.T) {
 	testCases := []struct {
 		name            string
@@ -280,7 +275,6 @@ func TestUpdateNewsByID(t *testing.T) {
 	}
 }
 
-// Test DeleteNewsByID
 func TestDeleteNewsByID(t *testing.T) {
 	testCases := []struct {
 		name            string
