@@ -354,6 +354,22 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 
 				if selectedItem.Status == "In_Progress" {
 					selectedItem.CurrentMoney += transfer.Amount
+					his := entities.History{
+						ID:           uuid.New().String(),
+						Method:       "deposit",
+						Type:         "saving_money",
+						Category:     "asset",
+						Name:         selectedItem.Name,
+						Money:        transfer.Amount,
+						TransferFrom: selectedHouse.NursingHouse.Name,
+						UserID:       userID,
+						TrackDate:    time.Now(),
+					}
+
+					_, err = u.userrepo.CreateHistory(&his)
+					if err != nil {
+						return nil, err
+					}
 					if selectedItem.CurrentMoney >= selectedItem.TotalCost {
 						selectedItem.Status = "Completed"
 						selectedItem.MonthlyExpenses = 0
@@ -384,6 +400,23 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 				}
 
 				retirement.CurrentSavings += transfer.Amount
+				his := entities.History{
+					ID:           uuid.New().String(),
+					Method:       "deposit",
+					Type:         "saving_money",
+					Category:     "retirementplan",
+					Name:         retirement.PlanName,
+					Money:        transfer.Amount,
+					TransferFrom: selectedHouse.NursingHouse.Name,
+					UserID:       userID,
+					TrackDate:    time.Now(),
+				}
+
+				_, err = u.userrepo.CreateHistory(&his)
+				if err != nil {
+					return nil, err
+				}
+
 				allMoney := retirement.CurrentSavings + retirement.CurrentTotalInvestment
 				if allMoney >= retirement.LastRequiredFunds {
 					retirement.Status = "Completed"
@@ -406,6 +439,22 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 			default:
 				continue
 			}
+		}
+
+		his := entities.History{
+			ID:        uuid.New().String(),
+			Method:    "withdraw",
+			Type:      "saving_money",
+			Category:  "asset",
+			Name:      selectedHouse.NursingHouse.Name,
+			Money:     selectedHouse.CurrentMoney - totalTransfer,
+			UserID:    userID,
+			TrackDate: time.Now(),
+		}
+
+		_, err = u.userrepo.CreateHistory(&his)
+		if err != nil {
+			return nil, err
 		}
 	}
 
