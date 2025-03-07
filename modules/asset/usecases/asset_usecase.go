@@ -288,5 +288,20 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 			continue
 		}
 	}
+
+	his := entities.History{
+		ID:       uuid.New().String(),
+		Method:   "withdraw",
+		Type:     "saving_money",
+		Category: "asset",
+		Name:     asset.Name,
+		Money:    asset.CurrentMoney,
+		UserID:   userID,
+	}
+	_, err = u.userrepo.CreateHistory(&his)
+	if err != nil {
+		return err
+	}
+
 	return u.assetrepo.DeleteAssetByID(asset.ID)
 }
