@@ -202,6 +202,23 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 
 			if selectedItem.Status == "In_Progress" {
 				selectedItem.CurrentMoney += transfer.Amount
+				his := entities.History{
+					ID:           uuid.New().String(),
+					Method:       "deposit",
+					Type:         "saving_money",
+					Category:     "asset",
+					Name:         selectedItem.Name,
+					Money:        transfer.Amount,
+					TransferFrom: asset.Name,
+					UserID:       userID,
+					TrackDate:    time.Now(),
+				}
+
+				_, err = u.userrepo.CreateHistory(&his)
+				if err != nil {
+					return err
+				}
+
 				if selectedItem.CurrentMoney >= selectedItem.TotalCost {
 					selectedItem.Status = "Completed"
 					selectedItem.MonthlyExpenses = 0
@@ -233,6 +250,23 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 
 			if house.NursingHouseID != "00001" || house.Status != "Completed" {
 				house.CurrentMoney += transfer.Amount
+				his := entities.History{
+					ID:           uuid.New().String(),
+					Method:       "deposit",
+					Type:         "saving_money",
+					Category:     "house",
+					Name:         house.NursingHouse.Name,
+					Money:        transfer.Amount,
+					TransferFrom: asset.Name,
+					UserID:       userID,
+					TrackDate:    time.Now(),
+				}
+
+				_, err = u.userrepo.CreateHistory(&his)
+				if err != nil {
+					return err
+				}
+
 				requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * house.NursingHouse.Price
 				if house.CurrentMoney >= float64(requiredMoney) {
 					house.Status = "Completed"
@@ -264,6 +298,23 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 			}
 
 			retirement.CurrentSavings += transfer.Amount
+			his := entities.History{
+				ID:           uuid.New().String(),
+				Method:       "deposit",
+				Type:         "saving_money",
+				Category:     "retirementplan",
+				Name:         retirement.PlanName,
+				Money:        transfer.Amount,
+				TransferFrom: asset.Name,
+				UserID:       userID,
+				TrackDate:    time.Now(),
+			}
+
+			_, err = u.userrepo.CreateHistory(&his)
+			if err != nil {
+				return err
+			}
+
 			allMoney := retirement.CurrentSavings + retirement.CurrentTotalInvestment
 			if allMoney >= retirement.LastRequiredFunds {
 				retirement.Status = "Completed"
@@ -290,14 +341,16 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 	}
 
 	his := entities.History{
-		ID:       uuid.New().String(),
-		Method:   "withdraw",
-		Type:     "saving_money",
-		Category: "asset",
-		Name:     asset.Name,
-		Money:    asset.CurrentMoney,
-		UserID:   userID,
+		ID:        uuid.New().String(),
+		Method:    "withdraw",
+		Type:      "saving_money",
+		Category:  "asset",
+		Name:      asset.Name,
+		Money:     asset.CurrentMoney - totalTransfer,
+		UserID:    userID,
+		TrackDate: time.Now(),
 	}
+
 	_, err = u.userrepo.CreateHistory(&his)
 	if err != nil {
 		return err
