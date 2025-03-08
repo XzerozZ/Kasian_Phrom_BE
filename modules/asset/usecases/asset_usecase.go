@@ -231,7 +231,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					}
 
 					_ = u.notirepo.CreateNotification(notification)
-					socket.SendNotificationToUser(userID, fmt.Sprintf("Notification: %s", notification.Message))
+					socket.SendNotificationToUser(userID, *notification)
 				}
 
 				_, err = u.assetrepo.UpdateAssetByID(selectedItem)
@@ -280,7 +280,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					}
 
 					_ = u.notirepo.CreateNotification(notification)
-					socket.SendNotificationToUser(userID, fmt.Sprintf("Notification: %s", notification.Message))
+					socket.SendNotificationToUser(userID, *notification)
 				}
 
 				_, err := u.userrepo.UpdateSelectedHouse(house)
@@ -328,7 +328,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 				}
 
 				_ = u.notirepo.CreateNotification(notification)
-				socket.SendNotificationToUser(userID, fmt.Sprintf("Notification: %s", notification.Message))
+				socket.SendNotificationToUser(userID, *notification)
 			}
 
 			_, err = u.retirementrepo.UpdateRetirementPlan(retirement)

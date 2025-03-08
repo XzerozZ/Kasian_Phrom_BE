@@ -377,7 +377,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
-						socket.SendNotificationToUser(userID, fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(userID, *notification)
 					}
 
 					_, err = u.assetrepo.UpdateAssetByID(selectedItem)
@@ -425,7 +425,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 					}
 
 					_ = u.notirepo.CreateNotification(notification)
-					socket.SendNotificationToUser(userID, fmt.Sprintf("Notification: %s", notification.Message))
+					socket.SendNotificationToUser(userID, *notification)
 				}
 				_, err = u.retirementrepo.UpdateRetirementPlan(retirement)
 				if err != nil {
@@ -743,7 +743,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
-						socket.SendNotificationToUser(user.ID, fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(user.ID, *notification)
 					}
 
 					if _, err := u.assetrepo.UpdateAssetByID(&validAssets[i]); err != nil {
@@ -766,7 +766,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
-						socket.SendNotificationToUser(user.ID, fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(user.ID, *notification)
 					}
 
 				}
@@ -786,7 +786,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
-						socket.SendNotificationToUser(user.ID, fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(user.ID, *notification)
 					}
 				}
 			case "retirementplan":
@@ -804,7 +804,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					}
 
 					_ = u.notirepo.CreateNotification(notification)
-					socket.SendNotificationToUser(user.ID, fmt.Sprintf("Notification: %s", notification.Message))
+					socket.SendNotificationToUser(user.ID, *notification)
 				}
 
 			case "house":
@@ -823,7 +823,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
-						socket.SendNotificationToUser(user.ID, fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(user.ID, *notification)
 					}
 				} else {
 					return nil, errors.New("cannot update completed nursing house")
@@ -849,7 +849,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						}
 
 						_ = u.notirepo.CreateNotification(notification)
-						socket.SendNotificationToUser(user.ID, fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(user.ID, *notification)
 					}
 
 					_, err = u.assetrepo.UpdateAssetByID(asset)
@@ -878,7 +878,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				}
 
 				_ = u.notirepo.CreateNotification(notification)
-				socket.SendNotificationToUser(user.ID, fmt.Sprintf("Notification: %s", notification.Message))
+				socket.SendNotificationToUser(user.ID, *notification)
 			}
 		}
 

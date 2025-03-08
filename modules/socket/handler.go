@@ -1,15 +1,16 @@
 package socket
 
 import (
+	"encoding/json"
 	"log"
 	"sync"
 
+	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/gofiber/websocket/v2"
 )
 
 var (
-	clients   = make(map[string]*websocket.Conn)
-	clientsMu sync.Mutex
+	clients sync.Map
 )
 
 func WebSocketHandler(c *websocket.Conn) {
@@ -20,16 +21,11 @@ func WebSocketHandler(c *websocket.Conn) {
 		return
 	}
 
-	clientsMu.Lock()
-	clients[userID] = c
-	clientsMu.Unlock()
-
+	clients.Store(userID, c)
 	log.Printf("User %s connected", userID)
 
 	defer func() {
-		clientsMu.Lock()
-		delete(clients, userID)
-		clientsMu.Unlock()
+		clients.Delete(userID)
 		c.Close()
 		log.Printf("User %s disconnected", userID)
 	}()
@@ -44,20 +40,29 @@ func WebSocketHandler(c *websocket.Conn) {
 	}
 }
 
-func SendNotificationToUser(userID string, message string) {
-	clientsMu.Lock()
-	defer clientsMu.Unlock()
-
-	client, exists := clients[userID]
+func SendNotificationToUser(userID string, noti entities.Notification) {
+	client, exists := clients.Load(userID)
 	if !exists {
 		log.Printf("User %s not connected", userID)
 		return
 	}
 
-	err := client.WriteMessage(websocket.TextMessage, []byte(message))
+	conn, ok := client.(*websocket.Conn)
+	if !ok {
+		log.Printf("Invalid WebSocket connection for user %s", userID)
+		return
+	}
+
+	notiJSON, err := json.Marshal(noti)
+	if err != nil {
+		log.Printf("Error marshaling notification: %v", err)
+		return
+	}
+
+	err = conn.WriteMessage(websocket.TextMessage, notiJSON)
 	if err != nil {
 		log.Printf("Error sending message to %s: %v", userID, err)
-		client.Close()
-		delete(clients, userID)
+		conn.Close()
+		clients.Delete(userID)
 	}
 }
