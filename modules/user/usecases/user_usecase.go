@@ -330,18 +330,13 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 	}
 
 	if nursingHouseID == defaultHouseID {
-		selectedHouse.NursingHouseID = nursingHouseID
-		selectedHouse.Status = statusCompleted
-		selectedHouse.LastCalculatedMonth = 0
-		selectedHouse.CurrentMoney = 0
-		selectedHouse.MonthlyExpenses = 0
 		totalTransfer := 0.0
 		for _, transfer := range transfers {
 			totalTransfer += transfer.Amount
 		}
 
 		if totalTransfer > selectedHouse.CurrentMoney {
-			return nil, errors.New("transfer amount exceeds asset's current money")
+			return nil, errors.New("transfer amount exceeds House's current money")
 		}
 
 		for _, transfer := range transfers {
@@ -456,6 +451,12 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 		if err != nil {
 			return nil, err
 		}
+
+		selectedHouse.NursingHouseID = nursingHouseID
+		selectedHouse.Status = statusCompleted
+		selectedHouse.LastCalculatedMonth = 0
+		selectedHouse.CurrentMoney = 0
+		selectedHouse.MonthlyExpenses = 0
 	}
 
 	if nursingHouseID != selectedHouse.NursingHouseID || selectedHouse.LastCalculatedMonth != int(time.Now().Month()) {
