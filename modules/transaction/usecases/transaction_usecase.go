@@ -132,7 +132,7 @@ func (u *TransactionUseCaseImpl) MarkTransactiontoPaid(id, userID string) error 
 			}
 
 			_ = u.notirepo.CreateNotification(notification)
-			socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+			socket.SendNotificationToUser(userID, fmt.Sprintf("Notification: %s", notification.Message))
 		}
 
 		if _, err := u.loanrepo.UpdateLoanByID(loan); err != nil {

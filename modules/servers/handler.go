@@ -44,7 +44,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail configs.Mail) {
+func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail configs.Mail, recom configs.Recommend) {
 	db := database.GetDB()
 	if db == nil {
 		log.Fatal("Failed to initialize database")
@@ -56,7 +56,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
 
-	setupNursingHouseRoutes(app, db, supa)
+	setupNursingHouseRoutes(app, db, supa, recom, jwt)
 	SetupNewsRoutes(app, db, supa)
 	setupFavoriteRoutes(app, jwt, db)
 	setupAssetRoutes(app, jwt, db)
@@ -73,7 +73,7 @@ func SetupRoutes(app *fiber.App, jwt configs.JWT, supa configs.Supabase, mail co
 		})
 	})
 
-	app.Get("/ws", websocket.New(socket.WebSocketHandler))
+	app.Get("/ws/:user_id", websocket.New(socket.WebSocketHandler))
 }
 
 func SetupNewsRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
@@ -123,9 +123,9 @@ func setupUserRoutes(app *fiber.App, db *gorm.DB, jwt configs.JWT, supa configs.
 	historyGroup.Get("/summary", middlewares.JWTMiddleware(jwt), userController.GetSummaryHistoryByUserIDHandler)
 }
 
-func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase) {
+func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase, recom configs.Recommend, jwt configs.JWT) {
 	nhRepository := nhRepositories.NewGormNhRepository(db)
-	nhUseCase := nhUseCases.NewNhUseCase(nhRepository, supa)
+	nhUseCase := nhUseCases.NewNhUseCase(nhRepository, supa, recom)
 	nhController := nhControllers.NewNhController(nhUseCase)
 
 	nhGroup := app.Group("/nursinghouses")
@@ -136,6 +136,10 @@ func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase)
 	nhGroup.Get("/id", nhController.GetNhNextIDHandler)
 	nhGroup.Get("/:id", nhController.GetNhByIDHandler)
 	nhGroup.Put("/:id", nhController.UpdateNhByIDHandler)
+
+	nhGroup.Get("/user/:id", middlewares.JWTMiddleware(jwt), nhController.GetNhByIDForUserHandler)
+	nhGroup.Get("/recommend/cosine", middlewares.JWTMiddleware(jwt), nhController.GetRecommendCosine)
+	nhGroup.Get("/recommend/llm", middlewares.JWTMiddleware(jwt), nhController.GetRecommendLLM)
 }
 
 func setupFavoriteRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {

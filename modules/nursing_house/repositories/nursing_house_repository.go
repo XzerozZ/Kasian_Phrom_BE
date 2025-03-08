@@ -24,9 +24,14 @@ type NhRepository interface {
 	GetInactiveNh() ([]entities.NursingHouse, error)
 	GetNhByID(id string) (*entities.NursingHouse, error)
 	GetNhNextID() (string, error)
+	GetNhByName(name string) (entities.NursingHouse, error)
 	UpdateNhByID(nursingHouse *entities.NursingHouse) (*entities.NursingHouse, error)
 	AddImages(id string, images []entities.Image) (*entities.NursingHouse, error)
 	RemoveImages(id string, imageID *string) error
+
+	CreateNhHistory(nhHistory *entities.NursingHouseHistory) error
+	GetNhHistory(userID string) (*entities.NursingHouseHistory, error)
+	UpdateNhHistory(nhHistory *entities.NursingHouseHistory) error
 }
 
 func (r *GormNhRepository) CreateNh(nursingHouse *entities.NursingHouse, images []entities.Image) (*entities.NursingHouse, error) {
@@ -107,6 +112,15 @@ func (r *GormNhRepository) GetNhNextID() (string, error) {
 	return formattedID, nil
 }
 
+func (r *GormNhRepository) GetNhByName(name string) (entities.NursingHouse, error) {
+	var nursingHouse entities.NursingHouse
+	if err := r.db.Preload("Images").First(&nursingHouse, name).Error; err != nil {
+		return entities.NursingHouse{}, err
+	}
+
+	return nursingHouse, nil
+}
+
 func (r *GormNhRepository) UpdateNhByID(nursingHouse *entities.NursingHouse) (*entities.NursingHouse, error) {
 	if err := r.db.Save(&nursingHouse).Error; err != nil {
 		return nil, err
@@ -170,6 +184,31 @@ func (r *GormNhRepository) RemoveImages(id string, imageID *string) error {
 	})
 
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *GormNhRepository) CreateNhHistory(nhHistory *entities.NursingHouseHistory) error {
+	if err := r.db.Create(&nhHistory).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *GormNhRepository) GetNhHistory(userID string) (*entities.NursingHouseHistory, error) {
+	var nhHistory *entities.NursingHouseHistory
+	if err := r.db.Preload("NursingHouse").Where("user_id = ?", userID).First(&nhHistory).Error; err != nil {
+		return nil, err
+	}
+
+	return nhHistory, nil
+}
+
+func (r *GormNhRepository) UpdateNhHistory(nhHistory *entities.NursingHouseHistory) error {
+	if err := r.db.Save(&nhHistory).Error; err != nil {
 		return err
 	}
 
