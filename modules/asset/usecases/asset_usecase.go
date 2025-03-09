@@ -51,6 +51,8 @@ func (u *AssetUseCaseImpl) CreateNotification(userID, assetName string) error {
 		Type:      "asset",
 		CreatedAt: time.Now(),
 	}
+
+	socket.SendNotificationToUser(userID, *notification)
 	return u.notirepo.CreateNotification(notification)
 }
 
