@@ -33,6 +33,8 @@ type NhUseCase interface {
 	GetNhByIDForUser(id, userID string) (*entities.NursingHouse, error)
 	RecommendationCosine(userID string) ([]entities.NursingHouse, error)
 	RecommendationLLM(userID string) ([]entities.NursingHouse, error)
+
+	CreateNhMock(nursingHouse entities.NursingHouse, links []string, ctx *fiber.Ctx) (*entities.NursingHouse, error)
 }
 
 type NhUseCaseImpl struct {
@@ -348,4 +350,31 @@ func (u *NhUseCaseImpl) RecommendationLLM(userID string) ([]entities.NursingHous
 	}
 
 	return nursingHomes, nil
+}
+
+func (u *NhUseCaseImpl) CreateNhMock(nursingHouse entities.NursingHouse, links []string, ctx *fiber.Ctx) (*entities.NursingHouse, error) {
+	id, err := u.nhrepo.GetNhNextID()
+	if err != nil {
+		return nil, err
+	}
+
+	if nursingHouse.Price < 0 {
+		return nil, errors.New("price must be greater than zero")
+	}
+
+	nursingHouse.ID = id
+	var images []entities.Image
+	for _, links := range links {
+		images = append(images, entities.Image{
+			ID:        uuid.New().String(),
+			ImageLink: links,
+		})
+	}
+
+	createdNh, err := u.nhrepo.CreateNh(&nursingHouse, images)
+	if err != nil {
+		return nil, err
+	}
+
+	return createdNh, nil
 }

@@ -130,6 +130,7 @@ func setupNursingHouseRoutes(app *fiber.App, db *gorm.DB, supa configs.Supabase,
 
 	nhGroup := app.Group("/nursinghouses")
 	nhGroup.Post("/", nhController.CreateNhHandler)
+	nhGroup.Post("/mock", nhController.CreateNhMockHandler)
 	nhGroup.Get("/", nhController.GetAllNhHandler)
 	nhGroup.Get("/active", nhController.GetAllActiveNhHandler)
 	nhGroup.Get("/inactive", nhController.GetAllInactiveNhHandler)
@@ -219,7 +220,7 @@ func setupNotiRoutes(app *fiber.App, jwt configs.JWT, db *gorm.DB) {
 	notiUseCase := notiUseCases.NewNotiUseCase(notiRepository)
 	notiController := notiControllers.NewNotiController(notiUseCase)
 
-	quizGroup := app.Group("/quiz")
+	quizGroup := app.Group("/notification")
 	quizGroup.Get("/", middlewares.JWTMiddleware(jwt), notiController.GetNotificationsByUserIDHandler)
 	quizGroup.Put("/", middlewares.JWTMiddleware(jwt), notiController.MarkAsReadHandler)
 }

@@ -226,7 +226,8 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					notification := &entities.Notification{
 						ID:        uuid.New().String(),
 						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", selectedItem.Name),
+						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ '%s' ได้เสร็จสิ้นแล้ว", selectedItem.Name),
+						Balance:   selectedItem.CurrentMoney,
 						CreatedAt: time.Now(),
 					}
 
@@ -275,7 +276,8 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					notification := &entities.Notification{
 						ID:        uuid.New().String(),
 						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก : '%s' ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
+						Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก '%s' ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
+						Balance:   house.CurrentMoney,
 						CreatedAt: time.Now(),
 					}
 
@@ -323,7 +325,8 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 				notification := &entities.Notification{
 					ID:        uuid.New().String(),
 					UserID:    user.ID,
-					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+					Balance:   allMoney,
 					CreatedAt: time.Now(),
 				}
 

@@ -372,7 +372,8 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 						notification := &entities.Notification{
 							ID:        uuid.New().String(),
 							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", selectedItem.Name),
+							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ '%s' ได้เสร็จสิ้นแล้ว", selectedItem.Name),
+							Balance:   selectedItem.CurrentMoney,
 							CreatedAt: time.Now(),
 						}
 
@@ -420,7 +421,8 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 					notification := &entities.Notification{
 						ID:        uuid.New().String(),
 						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+						Balance:   allMoney,
 						CreatedAt: time.Now(),
 					}
 
@@ -738,7 +740,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						notification := &entities.Notification{
 							ID:        uuid.New().String(),
 							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", validAssets[i].Name),
+							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ '%s' ได้เสร็จสิ้นแล้ว", validAssets[i].Name),
+							Balance:   validAssets[i].CurrentMoney,
 							CreatedAt: time.Now(),
 						}
 
@@ -761,7 +764,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						notification := &entities.Notification{
 							ID:        uuid.New().String(),
 							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก : '%s' ได้เสร็จสิ้นแล้ว", validHouse.NursingHouse.Name),
+							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก '%s' ได้เสร็จสิ้นแล้ว", validHouse.NursingHouse.Name),
+							Balance:   validHouse.CurrentMoney,
 							CreatedAt: time.Now(),
 						}
 
@@ -781,7 +785,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						notification := &entities.Notification{
 							ID:        uuid.New().String(),
 							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", validHouse.NursingHouse.Name),
+							Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ '%s' ของคุณได้ถึงเป้าแล้ว", validHouse.NursingHouse.Name),
+							Balance:   allMoney,
 							CreatedAt: time.Now(),
 						}
 
@@ -799,7 +804,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					notification := &entities.Notification{
 						ID:        uuid.New().String(),
 						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+						Balance:   allMoney,
 						CreatedAt: time.Now(),
 					}
 
@@ -818,7 +824,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						notification := &entities.Notification{
 							ID:        uuid.New().String(),
 							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก : '%s' ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
+							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก '%s' ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
+							Balance:   user.House.CurrentMoney,
 							CreatedAt: time.Now(),
 						}
 
@@ -844,7 +851,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						notification := &entities.Notification{
 							ID:        uuid.New().String(),
 							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", asset.Name),
+							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ '%s' ได้เสร็จสิ้นแล้ว", asset.Name),
+							Balance:   asset.CurrentMoney,
 							CreatedAt: time.Now(),
 						}
 
@@ -873,7 +881,8 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				notification := &entities.Notification{
 					ID:        uuid.New().String(),
 					UserID:    user.ID,
-					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+					Balance:   allMoney,
 					CreatedAt: time.Now(),
 				}
 
@@ -896,14 +905,6 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					user.RetirementPlan.Status = "Completed"
 					user.RetirementPlan.LastMonthlyExpenses = 0
 					user.RetirementPlan.LastMonthlyExpenses = 0
-					notification := &entities.Notification{
-						ID:        uuid.New().String(),
-						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
-						CreatedAt: time.Now(),
-					}
-
-					_ = u.notirepo.CreateNotification(notification)
 				} else {
 					user.RetirementPlan.Status = "In_Progress"
 				}
@@ -952,14 +953,6 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				user.RetirementPlan.Status = "Completed"
 				user.RetirementPlan.LastMonthlyExpenses = 0
 				user.RetirementPlan.LastMonthlyExpenses = 0
-				notification := &entities.Notification{
-					ID:        uuid.New().String(),
-					UserID:    user.ID,
-					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
-					CreatedAt: time.Now(),
-				}
-
-				_ = u.notirepo.CreateNotification(notification)
 			} else {
 				user.RetirementPlan.Status = "In_Progress"
 			}

@@ -28,6 +28,14 @@ func (m *MockNhUseCase) CreateNh(nh entities.NursingHouse, files []multipart.Fil
 	return nil, args.Error(1)
 }
 
+func (m *MockNhUseCase) CreateNhMock(nh entities.NursingHouse, links []string, ctx *fiber.Ctx) (*entities.NursingHouse, error) {
+	args := m.Called(nh, links, ctx)
+	if result := args.Get(0); result != nil {
+		return result.(*entities.NursingHouse), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func (m *MockNhUseCase) GetNhByID(id string) (*entities.NursingHouse, error) {
 	args := m.Called(id)
 	if result := args.Get(0); result != nil {

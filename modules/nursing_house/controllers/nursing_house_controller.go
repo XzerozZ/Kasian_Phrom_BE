@@ -334,3 +334,47 @@ func (c *NhController) GetRecommendLLM(ctx *fiber.Ctx) error {
 		"result":      data,
 	})
 }
+
+func (c *NhController) CreateNhMockHandler(ctx *fiber.Ctx) error {
+	var nursingHouse entities.NursingHouse
+	if err := ctx.BodyParser(&nursingHouse); err != nil {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	links := []string{
+		ctx.FormValue("link1"),
+		ctx.FormValue("link2"),
+		ctx.FormValue("link3"),
+		ctx.FormValue("link4"),
+		ctx.FormValue("link5"),
+	}
+
+	var validLinks []string
+	for _, link := range links {
+		if link != "" {
+			validLinks = append(validLinks, link)
+		}
+	}
+
+	data, err := c.nhusecase.CreateNhMock(nursingHouse, validLinks, ctx)
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Nursing house created successfully",
+		"result":      data,
+	})
+}
