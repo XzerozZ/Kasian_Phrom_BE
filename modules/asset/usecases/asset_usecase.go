@@ -47,7 +47,8 @@ func (u *AssetUseCaseImpl) CreateNotification(userID, assetName string) error {
 	notification := &entities.Notification{
 		ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assetName),
 		UserID:    userID,
-		Message:   fmt.Sprintf("ทรัพย์สิน '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assetName),
+		Message:   fmt.Sprintf("ทรัพย์สิน %s ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assetName),
+		Type:      "asset",
 		CreatedAt: time.Now(),
 	}
 	return u.notirepo.CreateNotification(notification)
@@ -226,7 +227,8 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					notification := &entities.Notification{
 						ID:        uuid.New().String(),
 						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ '%s' ได้เสร็จสิ้นแล้ว", selectedItem.Name),
+						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ %s ได้เสร็จสิ้นแล้ว", selectedItem.Name),
+						Type:      "asset",
 						Balance:   selectedItem.CurrentMoney,
 						CreatedAt: time.Now(),
 					}
@@ -276,7 +278,8 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					notification := &entities.Notification{
 						ID:        uuid.New().String(),
 						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก '%s' ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
+						Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก %s ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
+						Type:      "house",
 						Balance:   house.CurrentMoney,
 						CreatedAt: time.Now(),
 					}
@@ -325,7 +328,8 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 				notification := &entities.Notification{
 					ID:        uuid.New().String(),
 					UserID:    user.ID,
-					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ %s ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
+					Type:      "retirementplan",
 					Balance:   allMoney,
 					CreatedAt: time.Now(),
 				}

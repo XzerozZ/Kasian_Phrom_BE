@@ -127,7 +127,8 @@ func (u *TransactionUseCaseImpl) MarkTransactiontoPaid(id, userID string) error 
 			notification := &entities.Notification{
 				ID:        uuid.New().String(),
 				UserID:    userID,
-				Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", loan.Name),
+				Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ %s ได้เสร็จสิ้นแล้ว", loan.Name),
+				Type:      "loan",
 				CreatedAt: time.Now(),
 			}
 
