@@ -426,7 +426,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 						UserID:    user.ID,
 						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ %s ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
 						Type:      "retirementplan",
-						ObjectID:  user.House.NursingHouseID,
+						ObjectID:  user.RetirementPlan.ID,
 						Balance:   allMoney,
 						CreatedAt: time.Now(),
 					}
