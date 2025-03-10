@@ -282,7 +282,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					notification := &entities.Notification{
 						ID:        uuid.New().String(),
 						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก %s ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
+						Message:   "สุดยอดมาก บ้านพักคนชรา ได้เสร็จสิ้นแล้ว",
 						Type:      "house",
 						ObjectID:  house.NursingHouseID,
 						Balance:   house.CurrentMoney,

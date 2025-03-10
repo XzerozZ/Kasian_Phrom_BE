@@ -771,7 +771,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						notification := &entities.Notification{
 							ID:        uuid.New().String(),
 							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก %s ได้เสร็จสิ้นแล้ว", validHouse.NursingHouse.Name),
+							Message:   "สุดยอดมาก บ้านพักคนชรา ได้เสร็จสิ้นแล้ว",
 							Type:      "house",
 							ObjectID:  user.House.NursingHouseID,
 							Balance:   validHouse.CurrentMoney,
@@ -837,7 +837,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						notification := &entities.Notification{
 							ID:        uuid.New().String(),
 							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก %s ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
+							Message:   "สุดยอดมาก บ้านพักคนชรา ได้เสร็จสิ้นแล้ว",
 							Type:      "house",
 							ObjectID:  user.House.NursingHouseID,
 							Balance:   user.House.CurrentMoney,
