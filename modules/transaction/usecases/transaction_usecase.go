@@ -2,7 +2,6 @@ package usecases
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
@@ -10,6 +9,7 @@ import (
 	notiRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/socket"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/repositories"
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 	"github.com/google/uuid"
 )
 
@@ -124,15 +124,7 @@ func (u *TransactionUseCaseImpl) MarkTransactiontoPaid(id, userID string) error 
 		loan.RemainingMonths--
 		if loan.RemainingMonths == 0 {
 			loan.Status = "Completed"
-			notification := &entities.Notification{
-				ID:        uuid.New().String(),
-				UserID:    userID,
-				Message:   fmt.Sprintf("สุดยอดมาก คุณสามารถชำระหนี้ %s ได้ครบแล้ว", loan.Name),
-				Type:      "loan",
-				ObjectID:  loan.ID,
-				CreatedAt: time.Now(),
-			}
-
+			notification := utils.SuccessNotification("loan", userID, loan.Name, loan.ID, 0)
 			_ = u.notirepo.CreateNotification(notification)
 			socket.SendNotificationToUser(userID, *notification)
 		}

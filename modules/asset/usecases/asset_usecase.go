@@ -227,16 +227,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					selectedItem.Status = "Completed"
 					selectedItem.MonthlyExpenses = 0
 					selectedItem.LastCalculatedMonth = 0
-					notification := &entities.Notification{
-						ID:        uuid.New().String(),
-						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ %s ได้เสร็จสิ้นแล้ว", selectedItem.Name),
-						Type:      "asset",
-						ObjectID:  selectedItem.ID,
-						Balance:   selectedItem.CurrentMoney,
-						CreatedAt: time.Now(),
-					}
-
+					notification := utils.SuccessNotification("asset", user.ID, selectedItem.Name, selectedItem.ID, selectedItem.CurrentMoney)
 					_ = u.notirepo.CreateNotification(notification)
 					socket.SendNotificationToUser(userID, *notification)
 				}
@@ -279,16 +270,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					house.Status = "Completed"
 					house.MonthlyExpenses = 0
 					house.LastCalculatedMonth = 0
-					notification := &entities.Notification{
-						ID:        uuid.New().String(),
-						UserID:    user.ID,
-						Message:   "สุดยอดมาก บ้านพักคนชรา ได้เสร็จสิ้นแล้ว",
-						Type:      "house",
-						ObjectID:  house.NursingHouseID,
-						Balance:   house.CurrentMoney,
-						CreatedAt: time.Now(),
-					}
-
+					notification := utils.SuccessNotification("house", user.ID, house.NursingHouse.Name, house.NursingHouseID, house.CurrentMoney)
 					_ = u.notirepo.CreateNotification(notification)
 					socket.SendNotificationToUser(userID, *notification)
 				}
@@ -330,16 +312,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 				retirement.Status = "Completed"
 				retirement.LastMonthlyExpenses = 0
 				retirement.LastMonthlyExpenses = 0
-				notification := &entities.Notification{
-					ID:        uuid.New().String(),
-					UserID:    user.ID,
-					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ %s ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
-					Type:      "retirementplan",
-					ObjectID:  retirement.ID,
-					Balance:   allMoney,
-					CreatedAt: time.Now(),
-				}
-
+				notification := utils.SuccessNotification("retirementplan", user.ID, retirement.PlanName, retirement.ID, allMoney)
 				_ = u.notirepo.CreateNotification(notification)
 				socket.SendNotificationToUser(userID, *notification)
 			}

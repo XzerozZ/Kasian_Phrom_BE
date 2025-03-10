@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockQuizUseCase is a mock implementation of the QuizUseCase interface
 type MockQuizUseCase struct {
 	mock.Mock
 }
