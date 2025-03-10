@@ -9,5 +9,6 @@ type Notification struct {
 	Type      string    `json:"type" gorm:"not null"`
 	Balance   float64   `json:"balance"`
 	IsRead    bool      `json:"is_read" gorm:"default:false"`
+	ObjectID  string    `json:"object_id" gorm:"not null"`
 	CreatedAt time.Time `json:"created_at"`
 }

@@ -129,6 +129,7 @@ func (u *TransactionUseCaseImpl) MarkTransactiontoPaid(id, userID string) error 
 				UserID:    userID,
 				Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ %s ได้เสร็จสิ้นแล้ว", loan.Name),
 				Type:      "loan",
+				ObjectID:  loan.ID,
 				CreatedAt: time.Now(),
 			}
 

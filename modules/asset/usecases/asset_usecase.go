@@ -43,11 +43,12 @@ func NewAssetUseCase(assetrepo repositories.AssetRepository, userrepo userRepo.U
 	}
 }
 
-func (u *AssetUseCaseImpl) CreateNotification(userID, assetName string) error {
+func (u *AssetUseCaseImpl) CreateNotification(userID, assetID, assetName string) error {
 	notification := &entities.Notification{
 		ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assetName),
 		UserID:    userID,
 		Message:   fmt.Sprintf("ทรัพย์สิน %s ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assetName),
+		ObjectID:  assetID,
 		Type:      "asset",
 		CreatedAt: time.Now(),
 	}
@@ -66,7 +67,7 @@ func (u *AssetUseCaseImpl) UpdateAssetStatus(asset *entities.Asset, currentYear 
 		asset.Status = "Paused"
 		asset.LastCalculatedMonth = 0
 		asset.MonthlyExpenses = 0
-		return u.CreateNotification(asset.UserID, asset.Name)
+		return u.CreateNotification(asset.UserID, asset.ID, asset.Name)
 	}
 
 	if asset.Status == "Paused" {
@@ -231,6 +232,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 						UserID:    user.ID,
 						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ %s ได้เสร็จสิ้นแล้ว", selectedItem.Name),
 						Type:      "asset",
+						ObjectID:  selectedItem.ID,
 						Balance:   selectedItem.CurrentMoney,
 						CreatedAt: time.Now(),
 					}
@@ -282,6 +284,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 						UserID:    user.ID,
 						Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก %s ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
 						Type:      "house",
+						ObjectID:  house.NursingHouseID,
 						Balance:   house.CurrentMoney,
 						CreatedAt: time.Now(),
 					}
@@ -332,6 +335,7 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 					UserID:    user.ID,
 					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ %s ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
 					Type:      "retirementplan",
+					ObjectID:  retirement.ID,
 					Balance:   allMoney,
 					CreatedAt: time.Now(),
 				}

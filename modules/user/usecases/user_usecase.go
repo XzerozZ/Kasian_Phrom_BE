@@ -365,6 +365,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 					if err != nil {
 						return nil, err
 					}
+
 					if selectedItem.CurrentMoney >= selectedItem.TotalCost {
 						selectedItem.Status = "Completed"
 						selectedItem.MonthlyExpenses = 0
@@ -374,6 +375,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 							UserID:    user.ID,
 							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ %s ได้เสร็จสิ้นแล้ว", selectedItem.Name),
 							Type:      "asset",
+							ObjectID:  selectedItem.ID,
 							Balance:   selectedItem.CurrentMoney,
 							CreatedAt: time.Now(),
 						}
@@ -424,6 +426,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 						UserID:    user.ID,
 						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ %s ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
 						Type:      "retirementplan",
+						ObjectID:  user.House.NursingHouseID,
 						Balance:   allMoney,
 						CreatedAt: time.Now(),
 					}
@@ -744,6 +747,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 							UserID:    user.ID,
 							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ %s ได้เสร็จสิ้นแล้ว", validAssets[i].Name),
 							Type:      "asset",
+							ObjectID:  validAssets[i].ID,
 							Balance:   validAssets[i].CurrentMoney,
 							CreatedAt: time.Now(),
 						}
@@ -769,6 +773,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 							UserID:    user.ID,
 							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก %s ได้เสร็จสิ้นแล้ว", validHouse.NursingHouse.Name),
 							Type:      "house",
+							ObjectID:  user.House.NursingHouseID,
 							Balance:   validHouse.CurrentMoney,
 							CreatedAt: time.Now(),
 						}
@@ -791,6 +796,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 							UserID:    user.ID,
 							Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ %s ของคุณได้ถึงเป้าแล้ว", validHouse.NursingHouse.Name),
 							Type:      "retirementplan",
+							ObjectID:  user.RetirementPlan.ID,
 							Balance:   allMoney,
 							CreatedAt: time.Now(),
 						}
@@ -811,6 +817,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						UserID:    user.ID,
 						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ %s ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
 						Type:      "retirementplan",
+						ObjectID:  user.RetirementPlan.ID,
 						Balance:   allMoney,
 						CreatedAt: time.Now(),
 					}
@@ -832,6 +839,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 							UserID:    user.ID,
 							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก %s ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
 							Type:      "house",
+							ObjectID:  user.House.NursingHouseID,
 							Balance:   user.House.CurrentMoney,
 							CreatedAt: time.Now(),
 						}
@@ -860,6 +868,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 							UserID:    user.ID,
 							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ %s ได้เสร็จสิ้นแล้ว", asset.Name),
 							Type:      "asset",
+							ObjectID:  asset.ID,
 							Balance:   asset.CurrentMoney,
 							CreatedAt: time.Now(),
 						}
@@ -891,6 +900,7 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					UserID:    user.ID,
 					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ %s ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
 					Type:      "retirementplan",
+					ObjectID:  user.RetirementPlan.ID,
 					Balance:   allMoney,
 					CreatedAt: time.Now(),
 				}
