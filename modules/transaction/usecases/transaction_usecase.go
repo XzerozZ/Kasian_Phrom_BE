@@ -60,6 +60,9 @@ func (u *TransactionUseCaseImpl) CreateTransactionsForAllUsers() error {
 			}
 		} else if trans.Status == "ชำระ" {
 			trans.Status = "ค้างชำระ"
+			notification := utils.AlertNoti("loan", trans.UserID, trans.Loan.Name, trans.LoanID)
+			_ = u.notirepo.CreateNotification(notification)
+			socket.SendNotificationToUser(trans.UserID, *notification)
 			if err := u.transrepo.UpdateTransaction(&trans); err != nil {
 				return err
 			}

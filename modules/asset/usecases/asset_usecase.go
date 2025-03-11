@@ -2,7 +2,6 @@ package usecases
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -43,20 +42,6 @@ func NewAssetUseCase(assetrepo repositories.AssetRepository, userrepo userRepo.U
 	}
 }
 
-func (u *AssetUseCaseImpl) CreateNotification(userID, assetID, assetName string) error {
-	notification := &entities.Notification{
-		ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assetName),
-		UserID:    userID,
-		Message:   fmt.Sprintf("ทรัพย์สิน %s ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assetName),
-		ObjectID:  assetID,
-		Type:      "asset",
-		CreatedAt: time.Now(),
-	}
-
-	socket.SendNotificationToUser(userID, *notification)
-	return u.notirepo.CreateNotification(notification)
-}
-
 func (u *AssetUseCaseImpl) UpdateAssetStatus(asset *entities.Asset, currentYear int) error {
 	endYear, err := strconv.Atoi(asset.EndYear)
 	if err != nil {
@@ -67,7 +52,10 @@ func (u *AssetUseCaseImpl) UpdateAssetStatus(asset *entities.Asset, currentYear 
 		asset.Status = "Paused"
 		asset.LastCalculatedMonth = 0
 		asset.MonthlyExpenses = 0
-		return u.CreateNotification(asset.UserID, asset.ID, asset.Name)
+		notification := utils.AlertNoti("asset", asset.UserID, asset.Name, asset.ID)
+		_ = u.notirepo.CreateNotification(notification)
+		socket.SendNotificationToUser(asset.UserID, *notification)
+		return nil
 	}
 
 	if asset.Status == "Paused" {
