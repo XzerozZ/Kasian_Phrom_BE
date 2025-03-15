@@ -260,7 +260,7 @@ func (c *NewsController) DeleteNewsByIDHandler(ctx *fiber.Ctx) error {
 	err := c.newsusecase.DeleteNewsByID(id)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status":      "Error",
+			"status":      fiber.ErrInternalServerError.Message,
 			"status_code": fiber.StatusInternalServerError,
 			"message":     err.Error(),
 			"result":      nil,

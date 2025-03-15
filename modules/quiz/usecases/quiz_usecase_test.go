@@ -6,37 +6,13 @@ import (
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/quiz/usecases"
+	"github.com/XzerozZ/Kasian_Phrom_BE/testing/repositories/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-type MockQuizRepository struct {
-	mock.Mock
-}
-
-func (m *MockQuizRepository) CreateQuiz(quiz *entities.Quiz) (*entities.Quiz, error) {
-	args := m.Called(quiz)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entities.Quiz), args.Error(1)
-}
-
-func (m *MockQuizRepository) GetQuizByUserID(userID string) (*entities.Quiz, error) {
-	args := m.Called(userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entities.Quiz), args.Error(1)
-}
-
-func (m *MockQuizRepository) DeleteQuiz(userID string) error {
-	args := m.Called(userID)
-	return args.Error(0)
-}
-
 func TestCreateQuiz_NewUser(t *testing.T) {
-	mockRepo := new(MockQuizRepository)
+	mockRepo := new(mocks.MockQuizRepository)
 	mockRepo.On("GetQuizByUserID", "new-user-id").Return(nil, errors.New("quiz not found"))
 	expectedQuiz := &entities.Quiz{
 		UserID: "new-user-id",
@@ -57,7 +33,7 @@ func TestCreateQuiz_NewUser(t *testing.T) {
 }
 
 func TestCreateQuiz_ExistingUser(t *testing.T) {
-	mockRepo := new(MockQuizRepository)
+	mockRepo := new(mocks.MockQuizRepository)
 	existingQuiz := &entities.Quiz{
 		UserID: "existing-user-id",
 		RiskID: 1,
@@ -85,7 +61,7 @@ func TestCreateQuiz_ExistingUser(t *testing.T) {
 }
 
 func TestCreateQuiz_DeleteFails(t *testing.T) {
-	mockRepo := new(MockQuizRepository)
+	mockRepo := new(mocks.MockQuizRepository)
 
 	existingQuiz := &entities.Quiz{
 		UserID: "existing-user-id",
@@ -106,7 +82,7 @@ func TestCreateQuiz_DeleteFails(t *testing.T) {
 }
 
 func TestCreateQuiz_ZeroWeights(t *testing.T) {
-	mockRepo := new(MockQuizRepository)
+	mockRepo := new(mocks.MockQuizRepository)
 	mockRepo.On("GetQuizByUserID", "user-id").Return(nil, errors.New("quiz not found"))
 
 	expectedQuiz := &entities.Quiz{
@@ -128,7 +104,7 @@ func TestCreateQuiz_ZeroWeights(t *testing.T) {
 }
 
 func TestCreateQuiz_HighWeights(t *testing.T) {
-	mockRepo := new(MockQuizRepository)
+	mockRepo := new(mocks.MockQuizRepository)
 	mockRepo.On("GetQuizByUserID", "user-id").Return(nil, errors.New("quiz not found"))
 
 	expectedQuiz := &entities.Quiz{
@@ -150,7 +126,7 @@ func TestCreateQuiz_HighWeights(t *testing.T) {
 }
 
 func TestCreateQuiz_CreateFails(t *testing.T) {
-	mockRepo := new(MockQuizRepository)
+	mockRepo := new(mocks.MockQuizRepository)
 	mockRepo.On("GetQuizByUserID", "user-id").Return(nil, errors.New("quiz not found"))
 
 	mockRepo.On("CreateQuiz", mock.MatchedBy(func(q *entities.Quiz) bool {
@@ -168,7 +144,7 @@ func TestCreateQuiz_CreateFails(t *testing.T) {
 }
 
 func TestGetQuizByUserID_Success(t *testing.T) {
-	mockRepo := new(MockQuizRepository)
+	mockRepo := new(mocks.MockQuizRepository)
 	expectedQuiz := &entities.Quiz{
 		UserID: "test-user-id",
 		RiskID: 3,
@@ -184,7 +160,7 @@ func TestGetQuizByUserID_Success(t *testing.T) {
 }
 
 func TestGetQuizByUserID_NotFound(t *testing.T) {
-	mockRepo := new(MockQuizRepository)
+	mockRepo := new(mocks.MockQuizRepository)
 	mockRepo.On("GetQuizByUserID", "non-existent-user").Return(nil, errors.New("quiz not found"))
 	quizUseCase := usecases.NewQuizUseCase(mockRepo)
 

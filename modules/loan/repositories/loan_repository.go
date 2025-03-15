@@ -16,7 +16,7 @@ func NewGormLoanRepository(db *gorm.DB) *GormLoanRepository {
 type LoanRepository interface {
 	CreateLoan(loan *entities.Loan) (*entities.Loan, error)
 	GetLoanByID(id string) (*entities.Loan, error)
-	GetLoanByUserID(userID string) (map[string]interface{}, error)
+	GetLoanByUserID(userID string) ([]entities.Loan, map[string]interface{}, error)
 	GetAllLoansByStatus(statuses []string) ([]entities.Loan, error)
 	UpdateLoanByID(loan *entities.Loan) (*entities.Loan, error)
 	DeleteLoanByID(id string) error
@@ -39,10 +39,10 @@ func (r *GormLoanRepository) GetLoanByID(id string) (*entities.Loan, error) {
 	return &loan, nil
 }
 
-func (r *GormLoanRepository) GetLoanByUserID(userID string) (map[string]interface{}, error) {
+func (r *GormLoanRepository) GetLoanByUserID(userID string) ([]entities.Loan, map[string]interface{}, error) {
 	var loans []entities.Loan
-	if err := r.db.Where("user_id = ?  AND (status = ? OR status = ?)", userID, "In_Progress", "Paused").Find(&loans).Error; err != nil {
-		return nil, err
+	if err := r.db.Where("user_id = ? AND (status = ? OR status = ?)", userID, "In_Progress", "Paused").Find(&loans).Error; err != nil {
+		return nil, nil, err
 	}
 
 	var totalLoan int
@@ -56,7 +56,7 @@ func (r *GormLoanRepository) GetLoanByUserID(userID string) (map[string]interfac
 
 		var transactions []entities.Transaction
 		if err := r.db.Where("loan_id = ? AND (status = ? OR status = ?)", loan.ID, "ชำระ", "ค้างชำระ").Find(&transactions).Error; err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		for range transactions {
@@ -70,7 +70,7 @@ func (r *GormLoanRepository) GetLoanByUserID(userID string) (map[string]interfac
 		"total_transaction_amount": totalTransactionAmount,
 	}
 
-	return loanSummary, nil
+	return loans, loanSummary, nil
 }
 
 func (r *GormLoanRepository) GetAllLoansByStatus(statuses []string) ([]entities.Loan, error) {

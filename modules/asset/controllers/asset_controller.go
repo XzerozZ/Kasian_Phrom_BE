@@ -150,9 +150,9 @@ func (c *AssetController) UpdateAssetByIDHandler(ctx *fiber.Ctx) error {
 
 	updatedAsset, err := c.assetusecase.UpdateAssetByID(id, asset)
 	if err != nil {
-		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
-			"status":      fiber.ErrNotFound.Message,
-			"status_code": fiber.ErrNotFound.Code,
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusInternalServerError,
 			"message":     err.Error(),
 			"result":      nil,
 		})

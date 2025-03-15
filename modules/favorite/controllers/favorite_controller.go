@@ -29,8 +29,8 @@ func (c *FavController) CreateFavHandler(ctx *fiber.Ctx) error {
 	var fav entities.Favorite
 	if err := ctx.BodyParser(&fav); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status":      "Bad Request",
-			"status_code": fiber.StatusBadRequest,
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
 			"message":     "Invalid input data",
 			"result":      nil,
 		})
@@ -38,10 +38,10 @@ func (c *FavController) CreateFavHandler(ctx *fiber.Ctx) error {
 
 	fav.UserID = userID
 	if fav.NursingHouseID == "" {
-		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":      fiber.ErrBadRequest.Message,
 			"status_code": fiber.ErrBadRequest.Code,
-			"message":     "UserID or NursingHouseID is missing",
+			"message":     "NursingHouseID is missing",
 			"result":      nil,
 		})
 	}

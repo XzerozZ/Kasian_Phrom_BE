@@ -7,69 +7,22 @@ import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/news/usecases"
+	"github.com/XzerozZ/Kasian_Phrom_BE/testing/repositories/mocks"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-type MockNewsRepository struct {
-	mock.Mock
-}
-
-func (m *MockNewsRepository) GetNewsNextID() (string, error) {
-	args := m.Called()
-	return args.String(0), args.Error(1)
-}
-
-func (m *MockNewsRepository) CreateNews(news *entities.News) (*entities.News, error) {
-	args := m.Called(news)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entities.News), args.Error(1)
-}
-
-func (m *MockNewsRepository) GetAllNews() ([]entities.News, error) {
-	args := m.Called()
-	return args.Get(0).([]entities.News), args.Error(1)
-}
-
-func (m *MockNewsRepository) GetNewsByID(id string) (*entities.News, error) {
-	args := m.Called(id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entities.News), args.Error(1)
-}
-
-func (m *MockNewsRepository) UpdateNewsByID(news *entities.News) (*entities.News, error) {
-	args := m.Called(news)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entities.News), args.Error(1)
-}
-
-func (m *MockNewsRepository) DeleteNewsByID(id string) error {
-	args := m.Called(id)
-	return args.Error(0)
-}
-
-func (m *MockNewsRepository) DeleteDialog(id string) error {
-	args := m.Called(id)
-	return args.Error(0)
-}
-
 func TestCreateNews(t *testing.T) {
 	testCases := []struct {
 		name            string
-		prepareMockRepo func(*MockNewsRepository)
+		prepareMockRepo func(*mocks.MockNewsRepository)
 		news            *entities.News
 		expectedError   bool
 	}{
 		{
 			name: "Successful News Creation",
-			prepareMockRepo: func(m *MockNewsRepository) {
+			prepareMockRepo: func(m *mocks.MockNewsRepository) {
 				m.On("GetNewsNextID").Return("NEWS001", nil)
 				m.On("CreateNews", mock.Anything).Return(&entities.News{ID: "NEWS001"}, nil)
 			},
@@ -83,7 +36,7 @@ func TestCreateNews(t *testing.T) {
 		},
 		{
 			name: "Failed to Get Next ID",
-			prepareMockRepo: func(m *MockNewsRepository) {
+			prepareMockRepo: func(m *mocks.MockNewsRepository) {
 				m.On("GetNewsNextID").Return("", errors.New("id generation failed"))
 			},
 			news:          &entities.News{},
@@ -93,7 +46,7 @@ func TestCreateNews(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockRepo := new(MockNewsRepository)
+			mockRepo := new(mocks.MockNewsRepository)
 			mockConfig := configs.Supabase{}
 			tc.prepareMockRepo(mockRepo)
 			useCase := usecases.NewNewsUseCase(mockRepo, mockConfig)
@@ -115,12 +68,12 @@ func TestCreateNews(t *testing.T) {
 func TestGetAllNews(t *testing.T) {
 	testCases := []struct {
 		name            string
-		prepareMockRepo func(*MockNewsRepository)
+		prepareMockRepo func(*mocks.MockNewsRepository)
 		expectedError   bool
 	}{
 		{
 			name: "Successful Retrieval",
-			prepareMockRepo: func(m *MockNewsRepository) {
+			prepareMockRepo: func(m *mocks.MockNewsRepository) {
 				m.On("GetAllNews").Return([]entities.News{
 					{ID: "NEWS001", Title: "News 1"},
 					{ID: "NEWS002", Title: "News 2"},
@@ -130,7 +83,7 @@ func TestGetAllNews(t *testing.T) {
 		},
 		{
 			name: "Retrieval Failure",
-			prepareMockRepo: func(m *MockNewsRepository) {
+			prepareMockRepo: func(m *mocks.MockNewsRepository) {
 				m.On("GetAllNews").Return([]entities.News{}, errors.New("retrieval failed"))
 			},
 			expectedError: true,
@@ -139,7 +92,7 @@ func TestGetAllNews(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockRepo := new(MockNewsRepository)
+			mockRepo := new(mocks.MockNewsRepository)
 			mockConfig := configs.Supabase{}
 			tc.prepareMockRepo(mockRepo)
 			useCase := usecases.NewNewsUseCase(mockRepo, mockConfig)
@@ -160,13 +113,13 @@ func TestGetNewsByID(t *testing.T) {
 	testCases := []struct {
 		name            string
 		newsID          string
-		prepareMockRepo func(*MockNewsRepository)
+		prepareMockRepo func(*mocks.MockNewsRepository)
 		expectedError   bool
 	}{
 		{
 			name:   "Successful Retrieval",
 			newsID: "NEWS001",
-			prepareMockRepo: func(m *MockNewsRepository) {
+			prepareMockRepo: func(m *mocks.MockNewsRepository) {
 				m.On("GetNewsByID", "NEWS001").Return(&entities.News{
 					ID:    "NEWS001",
 					Title: "Test News",
@@ -177,7 +130,7 @@ func TestGetNewsByID(t *testing.T) {
 		{
 			name:   "Retrieval Failure",
 			newsID: "NONEXISTENT",
-			prepareMockRepo: func(m *MockNewsRepository) {
+			prepareMockRepo: func(m *mocks.MockNewsRepository) {
 				m.On("GetNewsByID", "NONEXISTENT").Return(nil, errors.New("news not found"))
 			},
 			expectedError: true,
@@ -186,7 +139,7 @@ func TestGetNewsByID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockRepo := new(MockNewsRepository)
+			mockRepo := new(mocks.MockNewsRepository)
 			mockConfig := configs.Supabase{}
 			tc.prepareMockRepo(mockRepo)
 			useCase := usecases.NewNewsUseCase(mockRepo, mockConfig)
@@ -209,14 +162,14 @@ func TestUpdateNewsByID(t *testing.T) {
 	testCases := []struct {
 		name            string
 		newsID          string
-		prepareMockRepo func(*MockNewsRepository)
+		prepareMockRepo func(*mocks.MockNewsRepository)
 		updateNews      entities.News
 		expectedError   bool
 	}{
 		{
 			name:   "Successful Update",
 			newsID: "NEWS001",
-			prepareMockRepo: func(m *MockNewsRepository) {
+			prepareMockRepo: func(m *mocks.MockNewsRepository) {
 				existingNews := &entities.News{
 					ID:    "NEWS001",
 					Title: "Old Title",
@@ -239,7 +192,7 @@ func TestUpdateNewsByID(t *testing.T) {
 		{
 			name:   "News Not Found",
 			newsID: "NONEXISTENT",
-			prepareMockRepo: func(m *MockNewsRepository) {
+			prepareMockRepo: func(m *mocks.MockNewsRepository) {
 				m.On("GetNewsByID", "NONEXISTENT").Return(nil, errors.New("news not found"))
 			},
 			updateNews:    entities.News{},
@@ -249,7 +202,7 @@ func TestUpdateNewsByID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockRepo := new(MockNewsRepository)
+			mockRepo := new(mocks.MockNewsRepository)
 			mockConfig := configs.Supabase{}
 			tc.prepareMockRepo(mockRepo)
 			useCase := usecases.NewNewsUseCase(mockRepo, mockConfig)
@@ -279,13 +232,13 @@ func TestDeleteNewsByID(t *testing.T) {
 	testCases := []struct {
 		name            string
 		newsID          string
-		prepareMockRepo func(*MockNewsRepository)
+		prepareMockRepo func(*mocks.MockNewsRepository)
 		expectedError   bool
 	}{
 		{
 			name:   "Successful Deletion",
 			newsID: "NEWS001",
-			prepareMockRepo: func(m *MockNewsRepository) {
+			prepareMockRepo: func(m *mocks.MockNewsRepository) {
 				m.On("GetNewsByID", "NEWS001").Return(&entities.News{
 					ID: "NEWS001",
 					Dialog: []entities.Dialog{
@@ -302,7 +255,7 @@ func TestDeleteNewsByID(t *testing.T) {
 		{
 			name:   "News Not Found",
 			newsID: "NONEXISTENT",
-			prepareMockRepo: func(m *MockNewsRepository) {
+			prepareMockRepo: func(m *mocks.MockNewsRepository) {
 				m.On("GetNewsByID", "NONEXISTENT").Return(nil, errors.New("news not found"))
 			},
 			expectedError: true,
@@ -311,7 +264,7 @@ func TestDeleteNewsByID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockRepo := new(MockNewsRepository)
+			mockRepo := new(mocks.MockNewsRepository)
 			mockConfig := configs.Supabase{}
 			tc.prepareMockRepo(mockRepo)
 			useCase := usecases.NewNewsUseCase(mockRepo, mockConfig)

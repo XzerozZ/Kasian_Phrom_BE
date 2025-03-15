@@ -13,7 +13,7 @@ import (
 type LoanUseCase interface {
 	CreateLoan(loan entities.Loan) (*entities.Loan, error)
 	GetLoanByID(id string) (*entities.Loan, error)
-	GetLoanByUserID(userID string) (map[string]interface{}, error)
+	GetLoanByUserID(userID string) ([]entities.Loan, map[string]interface{}, error)
 	UpdateLoanStatusByID(id string, loan entities.Loan) (*entities.Loan, error)
 	DeleteLoanByID(id string) error
 }
@@ -75,7 +75,7 @@ func (u *LoanUseCaseImpl) GetLoanByID(id string) (*entities.Loan, error) {
 	return u.loanrepo.GetLoanByID(id)
 }
 
-func (u *LoanUseCaseImpl) GetLoanByUserID(userID string) (map[string]interface{}, error) {
+func (u *LoanUseCaseImpl) GetLoanByUserID(userID string) ([]entities.Loan, map[string]interface{}, error) {
 	return u.loanrepo.GetLoanByUserID(userID)
 }
 

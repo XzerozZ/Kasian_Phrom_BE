@@ -12,34 +12,14 @@ import (
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/quiz/controllers"
+	"github.com/XzerozZ/Kasian_Phrom_BE/testing/usecases/mocks"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-type MockQuizUseCase struct {
-	mock.Mock
-}
-
-func (m *MockQuizUseCase) CreateQuiz(userID string, weights []int) (*entities.Quiz, error) {
-	args := m.Called(userID, weights)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entities.Quiz), args.Error(1)
-}
-
-func (m *MockQuizUseCase) GetQuizByUserID(userID string) (*entities.Quiz, error) {
-	args := m.Called(userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entities.Quiz), args.Error(1)
-}
-
-func setupTestApp() (*fiber.App, *MockQuizUseCase) {
+func setupTestApp() (*fiber.App, *mocks.MockQuizUseCase) {
 	app := fiber.New()
-	mockUseCase := new(MockQuizUseCase)
+	mockUseCase := new(mocks.MockQuizUseCase)
 	controller := controllers.NewQuizController(mockUseCase)
 
 	app.Post("/quiz", func(c *fiber.Ctx) error {
