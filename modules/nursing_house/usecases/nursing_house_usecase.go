@@ -311,6 +311,8 @@ func (u *NhUseCaseImpl) RecommendationLLM(userID string) ([]entities.NursingHous
 
 	nhName := nhHistory.NursingHouse.Name
 	urlStr := fmt.Sprintf("%s/llm?nh_name=%s", u.recom, nhName)
+	fmt.Println("u.recom:", u.recom)
+	fmt.Println("nhName:", nhName)
 	resp, err := http.Get(urlStr)
 	if err != nil {
 		return nil, err
