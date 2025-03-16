@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
@@ -240,7 +241,8 @@ func (u *NhUseCaseImpl) RecommendationCosine(userID string) ([]entities.NursingH
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/cosine?nh_name=%s", u.recom, nhHistory.NursingHouse.Name)
+	nhNameEncoded := url.QueryEscape(nhHistory.NursingHouse.Name)
+	url := fmt.Sprintf("%s/cosine?nh_name=%s", u.recom, nhNameEncoded)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -308,7 +310,8 @@ func (u *NhUseCaseImpl) RecommendationLLM(userID string) ([]entities.NursingHous
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/llm?nh_name=%s", u.recom, nhHistory.NursingHouse.Name)
+	nhNameEncoded := url.QueryEscape(nhHistory.NursingHouse.Name)
+	url := fmt.Sprintf("%s/llm?nh_name=%s", u.recom, nhNameEncoded)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
