@@ -13,7 +13,7 @@ import (
 	"gopkg.in/gomail.v2"
 )
 
-func SendMail(templatePath string, user entities.User, otp string, config configs.Mail) error {
+func SendMail(templatePath string, user *entities.User, otp string, config configs.Mail) error {
 	var body bytes.Buffer
 	t, err := template.ParseFiles(templatePath)
 	if err != nil {

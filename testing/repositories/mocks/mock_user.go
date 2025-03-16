@@ -21,9 +21,9 @@ func (m *MockUserRepository) CreateSelectedHouse(selectedHouse *entities.Selecte
 	return args.Error(0)
 }
 
-func (m *MockUserRepository) FindUserByEmail(email string) (entities.User, error) {
+func (m *MockUserRepository) FindUserByEmail(email string) (*entities.User, error) {
 	args := m.Called(email)
-	return args.Get(0).(entities.User), args.Error(1)
+	return args.Get(0).(*entities.User), args.Error(1)
 }
 
 func (m *MockUserRepository) GetUserByID(id string) (*entities.User, error) {

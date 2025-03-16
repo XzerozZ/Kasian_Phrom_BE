@@ -139,7 +139,7 @@ func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.
 		return "", nil, err
 	}
 
-	return tokenString, &user, nil
+	return tokenString, user, nil
 }
 
 func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User, error) {
@@ -172,7 +172,7 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 		return "", nil, err
 	}
 
-	return tokenString, &user, nil
+	return tokenString, user, nil
 }
 
 func (u *UserUseCaseImpl) LoginWithGoogle(user *entities.User) (string, *entities.User, error) {
@@ -213,7 +213,7 @@ func (u *UserUseCaseImpl) LoginWithGoogle(user *entities.User) (string, *entitie
 		return "", nil, err
 	}
 
-	return tokenString, &account, nil
+	return tokenString, account, nil
 }
 
 func (u *UserUseCaseImpl) ResetPassword(userID, oldPassword, newPassword string) error {
@@ -254,7 +254,7 @@ func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHou
 		return nil, err
 	}
 
-	currentMonth := int(time.Now().Month())
+	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 	if house.NursingHouseID == defaultHouseID {
 		house.MonthlyExpenses = 0
 		house.LastCalculatedMonth = 0
@@ -267,7 +267,6 @@ func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHou
 			return nil, err
 		}
 
-		currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 		monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user, float64(house.NursingHouse.Price), int(currentYear), currentMonth)
 		if err != nil {
 			return nil, err
@@ -551,7 +550,7 @@ func (u *UserUseCaseImpl) ChangedPassword(email, newPassword string) error {
 	}
 
 	user.Password = string(hashedPassword)
-	_, err = u.userrepo.UpdateUserByID(&user)
+	_, err = u.userrepo.UpdateUserByID(user)
 	if err != nil {
 		return err
 	}

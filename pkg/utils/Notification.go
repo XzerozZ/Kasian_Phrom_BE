@@ -106,7 +106,7 @@ func SuccessNotification(itemType, userID, itemName, objectID string, balance fl
 	}
 }
 
-func AlertNoti(itemType, userID, itemName, objectID string) *entities.Notification {
+func AlertNoti(itemType, userID, itemName, objectID string, balance float64) *entities.Notification {
 	switch itemType {
 	case "asset":
 		notification := &entities.Notification{
@@ -126,6 +126,7 @@ func AlertNoti(itemType, userID, itemName, objectID string) *entities.Notificati
 			Message:   alertLoanMessages[rand.Intn(len(alertLoanMessages))],
 			Type:      itemType,
 			ObjectID:  objectID,
+			Balance:   balance,
 			CreatedAt: time.Now(),
 		}
 

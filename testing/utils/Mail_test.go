@@ -87,7 +87,7 @@ func TestSendMail(t *testing.T) {
 			Key:    "testkey",
 		}
 
-		err := utils.SendMail("/path/to/non/existent/template.html", user, "123456", config)
+		err := utils.SendMail("/path/to/non/existent/template.html", &user, "123456", config)
 		assert.Error(t, err)
 	})
 
@@ -103,7 +103,7 @@ func TestSendMail(t *testing.T) {
 			Key:    "testkey",
 		}
 
-		err := utils.SendMail("", user, "123456", config)
+		err := utils.SendMail("", &user, "123456", config)
 		assert.Error(t, err)
 	})
 }

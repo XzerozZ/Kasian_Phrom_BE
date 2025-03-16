@@ -870,7 +870,7 @@ func TestDeleteAssetByID_HouseCompletedAfterTransfer(t *testing.T) {
 		NursingHouse: entities.NursingHouse{
 			ID:    "NH001",
 			Name:  "Almost Complete House",
-			Price: 1000.0, // Monthly price
+			Price: 1000.0,
 		},
 	}
 

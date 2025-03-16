@@ -52,7 +52,7 @@ func (u *AssetUseCaseImpl) UpdateAssetStatus(asset *entities.Asset, currentYear 
 		asset.Status = "Paused"
 		asset.LastCalculatedMonth = 0
 		asset.MonthlyExpenses = 0
-		notification := utils.AlertNoti("asset", asset.UserID, asset.Name, asset.ID)
+		notification := utils.AlertNoti("asset", asset.UserID, asset.Name, asset.ID, asset.TotalCost)
 		_ = u.notirepo.CreateNotification(notification)
 		socket.SendNotificationToUser(asset.UserID, *notification)
 		return nil
