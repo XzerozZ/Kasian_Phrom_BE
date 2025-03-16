@@ -241,7 +241,7 @@ func (u *NhUseCaseImpl) RecommendationCosine(userID string) ([]entities.NursingH
 	}
 
 	nhName := nhHistory.NursingHouse.Name
-	urlStr := fmt.Sprintf("%s/cosine?nh_name=%s", u.recom.URL, nhName)
+	urlStr := fmt.Sprintf("%scosine?nh_name=%s", u.recom.URL, nhName)
 	resp, err := http.Get(urlStr)
 	if err != nil {
 		return nil, err
@@ -310,7 +310,7 @@ func (u *NhUseCaseImpl) RecommendationLLM(userID string) ([]entities.NursingHous
 	}
 
 	nhName := nhHistory.NursingHouse.Name
-	urlStr := fmt.Sprintf("%s/llm?nh_name=%s", u.recom.URL, nhName)
+	urlStr := fmt.Sprintf("%sllm?nh_name=%s", u.recom.URL, nhName)
 	resp, err := http.Get(urlStr)
 	if err != nil {
 		return nil, err
