@@ -241,9 +241,9 @@ func (u *NhUseCaseImpl) RecommendationCosine(userID string) ([]entities.NursingH
 		return nil, err
 	}
 
-	nhNameEncoded := url.QueryEscape(nhHistory.NursingHouse.Name)
-	url := fmt.Sprintf("%s/cosine?nh_name=%s", u.recom, nhNameEncoded)
-	resp, err := http.Get(url)
+	encodedNhName := url.QueryEscape(nhHistory.NursingHouse.Name)
+	urlStr := fmt.Sprintf("%s/cosine?nh_name=%s", u.recom, encodedNhName)
+	resp, err := http.Get(urlStr)
 	if err != nil {
 		return nil, err
 	}
@@ -310,9 +310,9 @@ func (u *NhUseCaseImpl) RecommendationLLM(userID string) ([]entities.NursingHous
 		return nil, err
 	}
 
-	nhNameEncoded := url.QueryEscape(nhHistory.NursingHouse.Name)
-	url := fmt.Sprintf("%s/llm?nh_name=%s", u.recom, nhNameEncoded)
-	resp, err := http.Get(url)
+	encodedNhName := url.QueryEscape(nhHistory.NursingHouse.Name)
+	urlStr := fmt.Sprintf("%s/llm?nh_name=%s", u.recom, encodedNhName)
+	resp, err := http.Get(urlStr)
 	if err != nil {
 		return nil, err
 	}
