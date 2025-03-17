@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -241,22 +242,21 @@ func (u *NhUseCaseImpl) RecommendationCosine(userID string) ([]entities.NursingH
 		return nil, err
 	}
 
-	nhName := nhHistory.NursingHouse.Name
-	nhName = strings.ReplaceAll(nhName, " ", "_")
-	urlStr := fmt.Sprintf("%scosine?nh_name=%s", u.recom.URL, nhName)
+	nhName := url.QueryEscape(strings.ReplaceAll(nhHistory.NursingHouse.Name, " ", "_"))
+	urlStr := fmt.Sprintf("%s/cosine?nh_name=%s", u.recom.URL, nhName)
 	resp, err := http.Get(urlStr)
 	if err != nil {
 		return nil, err
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get recommendation: %s", resp.Status)
-	}
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get recommendation: %s | Response: %s", resp.Status, string(body))
 	}
 
 	var result map[string]interface{}
@@ -311,22 +311,21 @@ func (u *NhUseCaseImpl) RecommendationLLM(userID string) ([]entities.NursingHous
 		return nil, err
 	}
 
-	nhName := nhHistory.NursingHouse.Name
-	nhName = strings.ReplaceAll(nhName, " ", "_")
-	urlStr := fmt.Sprintf("%sllm?nh_name=%s", u.recom.URL, nhName)
+	nhName := url.QueryEscape(strings.ReplaceAll(nhHistory.NursingHouse.Name, " ", "_"))
+	urlStr := fmt.Sprintf("%s/llm?nh_name=%s", u.recom.URL, nhName)
 	resp, err := http.Get(urlStr)
 	if err != nil {
 		return nil, err
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get recommendation: %s", resp.Status)
-	}
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get recommendation: %s | Response: %s", resp.Status, string(body))
 	}
 
 	var result map[string]interface{}

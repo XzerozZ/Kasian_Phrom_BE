@@ -114,7 +114,7 @@ func (r *GormNhRepository) GetNhNextID() (string, error) {
 
 func (r *GormNhRepository) GetNhByName(name string) (entities.NursingHouse, error) {
 	var nursingHouse entities.NursingHouse
-	if err := r.db.Preload("Images").First(&nursingHouse, name).Error; err != nil {
+	if err := r.db.Preload("Images").Where("name = ?", name).First(&nursingHouse).Error; err != nil {
 		return entities.NursingHouse{}, err
 	}
 
@@ -208,9 +208,5 @@ func (r *GormNhRepository) GetNhHistory(userID string) (*entities.NursingHouseHi
 }
 
 func (r *GormNhRepository) UpdateNhHistory(nhHistory *entities.NursingHouseHistory) error {
-	if err := r.db.Save(&nhHistory).Error; err != nil {
-		return err
-	}
-
-	return nil
+	return r.db.Model(&entities.NursingHouseHistory{}).Where("user_id = ?", nhHistory.UserID).Update("nursing_house_id", nhHistory.NursingHouseID).Error
 }
