@@ -112,15 +112,15 @@ func (u *AssetUseCaseImpl) GetAssetByUserID(userID string) ([]entities.Asset, er
 	}
 
 	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
-	for i := range assets {
-		if err := u.UpdateAssetStatus(&assets[i], currentYear); err != nil {
+	for _, asset := range assets {
+		if err := u.UpdateAssetStatus(&asset, currentYear); err != nil {
 			return nil, err
 		}
 
-		if assets[i].LastCalculatedMonth != currentMonth {
-			assets[i].MonthlyExpenses = utils.CalculateMonthlyExpenses(&assets[i], currentYear, currentMonth)
-			assets[i].LastCalculatedMonth = currentMonth
-			if _, err = u.assetrepo.UpdateAssetByID(&assets[i]); err != nil {
+		if asset.Status != "Paused" && asset.LastCalculatedMonth != currentMonth {
+			asset.MonthlyExpenses = utils.CalculateMonthlyExpenses(&asset, currentYear, currentMonth)
+			asset.LastCalculatedMonth = currentMonth
+			if _, err = u.assetrepo.UpdateAssetByID(&asset); err != nil {
 				return nil, err
 			}
 		}
@@ -141,6 +141,7 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 
 	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 	totalCostChanged := existingAsset.TotalCost != asset.TotalCost
+	StatusChanged := existingAsset.Status != "In_Progress" && asset.Status == "In_Progress"
 	existingAsset.TotalCost = asset.TotalCost
 	existingAsset.Name = asset.Name
 	existingAsset.Type = asset.Type
@@ -155,8 +156,7 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 			return nil, err
 		}
 
-		if totalCostChanged || existingAsset.LastCalculatedMonth != currentMonth {
-			existingAsset.LastCalculatedMonth = currentMonth
+		if totalCostChanged || StatusChanged {
 			existingAsset.MonthlyExpenses = utils.CalculateMonthlyExpenses(existingAsset, currentYear, currentMonth)
 		}
 	}

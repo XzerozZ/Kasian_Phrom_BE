@@ -578,7 +578,7 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		allTotalCost += asset.TotalCost
 		if asset.LastCalculatedMonth == currentMonth {
 			allAssetsExpense += asset.MonthlyExpenses
-		} else if asset.LastCalculatedMonth != currentMonth {
+		} else if asset.Status != "Paused" && asset.LastCalculatedMonth != currentMonth {
 			asset.MonthlyExpenses = utils.CalculateMonthlyExpenses(&asset, currentYear, currentMonth)
 			asset.LastCalculatedMonth = currentMonth
 			allAssetsExpense += asset.MonthlyExpenses
