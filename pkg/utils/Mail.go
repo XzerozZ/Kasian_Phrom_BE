@@ -20,6 +20,10 @@ func SendMail(templatePath string, user *entities.User, otp string, config confi
 		return err
 	}
 
+	if templatePath == "" {
+		return errors.New("template is empty")
+	}
+
 	err = t.Execute(&body, struct {
 		Username string
 		OTP      string

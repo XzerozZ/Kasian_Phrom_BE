@@ -7,6 +7,7 @@ import (
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/servers"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/database"
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -18,6 +19,7 @@ func main() {
 		BodyLimit: math.MaxInt64,
 	})
 
+	utils.StartScheduler()
 	servers.SetupRoutes(app, config.JWT, config.Supabase, config.Mail, config.Recommend)
 	serverAddress := config.App.Host + ":" + config.App.Port
 	log.Printf("Server is running on %s", serverAddress)

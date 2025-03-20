@@ -427,7 +427,7 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 			ID:        uuid.New().String(),
 			Method:    "withdraw",
 			Type:      "saving_money",
-			Category:  "asset",
+			Category:  "house",
 			Name:      selectedHouse.NursingHouse.Name,
 			Money:     selectedHouse.CurrentMoney - totalTransfer,
 			UserID:    userID,

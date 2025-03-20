@@ -7,6 +7,7 @@ require github.com/gofiber/contrib/websocket v1.3.3
 require (
 	github.com/gofiber/utils v0.0.10 // indirect
 	github.com/gorilla/schema v1.1.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 )
 
 require (

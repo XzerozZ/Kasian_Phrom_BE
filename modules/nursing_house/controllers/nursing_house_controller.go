@@ -38,6 +38,15 @@ func (c *NhController) CreateNhHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
+	if nursingHouse.Name == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Invalid request: Missing nursing house name",
+			"result":      nil,
+		})
+	}
+
 	files := form.File["images"]
 	if len(files) == 0 {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
