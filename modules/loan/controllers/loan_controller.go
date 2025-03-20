@@ -99,7 +99,7 @@ func (c *LoanController) GetLoanByUserIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
-	loans, err := c.loanusecase.GetLoanByUserID(userID)
+	loans, loanSummary, err := c.loanusecase.GetLoanByUserID(userID)
 	if err != nil {
 		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
 			"status":      fiber.ErrNotFound.Message,
@@ -109,11 +109,26 @@ func (c *LoanController) GetLoanByUserIDHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
+	var loanList []map[string]interface{}
+	for _, loan := range loans {
+		loanList = append(loanList, map[string]interface{}{
+			"id":               loan.ID,
+			"name":             loan.Name,
+			"type":             loan.Type,
+			"userID":           loan.UserID,
+			"remaining_months": loan.RemainingMonths,
+			"monthly_expenses": loan.MonthlyExpenses,
+		})
+	}
+
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "Success",
 		"status_code": fiber.StatusOK,
 		"message":     "Loans retrieved successfully",
-		"result":      loans,
+		"result": fiber.Map{
+			"loans":   loanList,
+			"summary": loanSummary,
+		},
 	})
 }
 

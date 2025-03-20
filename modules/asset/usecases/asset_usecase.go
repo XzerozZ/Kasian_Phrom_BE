@@ -2,7 +2,6 @@ package usecases
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -43,16 +42,6 @@ func NewAssetUseCase(assetrepo repositories.AssetRepository, userrepo userRepo.U
 	}
 }
 
-func (u *AssetUseCaseImpl) CreateNotification(userID, assetName string) error {
-	notification := &entities.Notification{
-		ID:        fmt.Sprintf("notif-%d-%s", time.Now().UnixNano(), assetName),
-		UserID:    userID,
-		Message:   fmt.Sprintf("ทรัพย์สิน '%s' ถูกหยุดพักชั่วคราวเนื่องจากหมดเวลา", assetName),
-		CreatedAt: time.Now(),
-	}
-	return u.notirepo.CreateNotification(notification)
-}
-
 func (u *AssetUseCaseImpl) UpdateAssetStatus(asset *entities.Asset, currentYear int) error {
 	endYear, err := strconv.Atoi(asset.EndYear)
 	if err != nil {
@@ -63,7 +52,10 @@ func (u *AssetUseCaseImpl) UpdateAssetStatus(asset *entities.Asset, currentYear 
 		asset.Status = "Paused"
 		asset.LastCalculatedMonth = 0
 		asset.MonthlyExpenses = 0
-		return u.CreateNotification(asset.UserID, asset.Name)
+		notification := utils.AlertNoti("asset", asset.UserID, asset.Name, asset.ID, asset.TotalCost)
+		_ = u.notirepo.CreateNotification(notification)
+		socket.SendNotificationToUser(asset.UserID, *notification)
+		return nil
 	}
 
 	if asset.Status == "Paused" {
@@ -120,15 +112,15 @@ func (u *AssetUseCaseImpl) GetAssetByUserID(userID string) ([]entities.Asset, er
 	}
 
 	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
-	for i := range assets {
-		if err := u.UpdateAssetStatus(&assets[i], currentYear); err != nil {
+	for _, asset := range assets {
+		if err := u.UpdateAssetStatus(&asset, currentYear); err != nil {
 			return nil, err
 		}
 
-		if assets[i].LastCalculatedMonth != currentMonth {
-			assets[i].MonthlyExpenses = utils.CalculateMonthlyExpenses(&assets[i], currentYear, currentMonth)
-			assets[i].LastCalculatedMonth = currentMonth
-			if _, err = u.assetrepo.UpdateAssetByID(&assets[i]); err != nil {
+		if asset.Status != "Paused" && asset.LastCalculatedMonth != currentMonth {
+			asset.MonthlyExpenses = utils.CalculateMonthlyExpenses(&asset, currentYear, currentMonth)
+			asset.LastCalculatedMonth = currentMonth
+			if _, err = u.assetrepo.UpdateAssetByID(&asset); err != nil {
 				return nil, err
 			}
 		}
@@ -149,6 +141,7 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 
 	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 	totalCostChanged := existingAsset.TotalCost != asset.TotalCost
+	StatusChanged := existingAsset.Status != "In_Progress" && asset.Status == "In_Progress"
 	existingAsset.TotalCost = asset.TotalCost
 	existingAsset.Name = asset.Name
 	existingAsset.Type = asset.Type
@@ -163,8 +156,7 @@ func (u *AssetUseCaseImpl) UpdateAssetByID(id string, asset entities.Asset) (*en
 			return nil, err
 		}
 
-		if totalCostChanged || existingAsset.LastCalculatedMonth != currentMonth {
-			existingAsset.LastCalculatedMonth = currentMonth
+		if totalCostChanged || StatusChanged {
 			existingAsset.MonthlyExpenses = utils.CalculateMonthlyExpenses(existingAsset, currentYear, currentMonth)
 		}
 	}
@@ -202,19 +194,30 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 
 			if selectedItem.Status == "In_Progress" {
 				selectedItem.CurrentMoney += transfer.Amount
+				his := entities.History{
+					ID:           uuid.New().String(),
+					Method:       "deposit",
+					Type:         "saving_money",
+					Category:     "asset",
+					Name:         selectedItem.Name,
+					Money:        transfer.Amount,
+					TransferFrom: asset.Name,
+					UserID:       userID,
+					TrackDate:    time.Now(),
+				}
+
+				_, err = u.userrepo.CreateHistory(&his)
+				if err != nil {
+					return err
+				}
+
 				if selectedItem.CurrentMoney >= selectedItem.TotalCost {
 					selectedItem.Status = "Completed"
 					selectedItem.MonthlyExpenses = 0
 					selectedItem.LastCalculatedMonth = 0
-					notification := &entities.Notification{
-						ID:        uuid.New().String(),
-						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", selectedItem.Name),
-						CreatedAt: time.Now(),
-					}
-
+					notification := utils.SuccessNotification("asset", user.ID, selectedItem.Name, selectedItem.ID, selectedItem.CurrentMoney)
 					_ = u.notirepo.CreateNotification(notification)
-					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+					socket.SendNotificationToUser(userID, *notification)
 				}
 
 				_, err = u.assetrepo.UpdateAssetByID(selectedItem)
@@ -233,20 +236,31 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 
 			if house.NursingHouseID != "00001" || house.Status != "Completed" {
 				house.CurrentMoney += transfer.Amount
+				his := entities.History{
+					ID:           uuid.New().String(),
+					Method:       "deposit",
+					Type:         "saving_money",
+					Category:     "house",
+					Name:         house.NursingHouse.Name,
+					Money:        transfer.Amount,
+					TransferFrom: asset.Name,
+					UserID:       userID,
+					TrackDate:    time.Now(),
+				}
+
+				_, err = u.userrepo.CreateHistory(&his)
+				if err != nil {
+					return err
+				}
+
 				requiredMoney := (user.RetirementPlan.ExpectLifespan - user.RetirementPlan.RetirementAge) * 12 * house.NursingHouse.Price
 				if house.CurrentMoney >= float64(requiredMoney) {
 					house.Status = "Completed"
 					house.MonthlyExpenses = 0
 					house.LastCalculatedMonth = 0
-					notification := &entities.Notification{
-						ID:        uuid.New().String(),
-						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก : '%s' ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
-						CreatedAt: time.Now(),
-					}
-
+					notification := utils.SuccessNotification("house", user.ID, house.NursingHouse.Name, house.NursingHouseID, house.CurrentMoney)
 					_ = u.notirepo.CreateNotification(notification)
-					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+					socket.SendNotificationToUser(userID, *notification)
 				}
 
 				_, err := u.userrepo.UpdateSelectedHouse(house)
@@ -264,20 +278,31 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 			}
 
 			retirement.CurrentSavings += transfer.Amount
+			his := entities.History{
+				ID:           uuid.New().String(),
+				Method:       "deposit",
+				Type:         "saving_money",
+				Category:     "retirementplan",
+				Name:         retirement.PlanName,
+				Money:        transfer.Amount,
+				TransferFrom: asset.Name,
+				UserID:       userID,
+				TrackDate:    time.Now(),
+			}
+
+			_, err = u.userrepo.CreateHistory(&his)
+			if err != nil {
+				return err
+			}
+
 			allMoney := retirement.CurrentSavings + retirement.CurrentTotalInvestment
 			if allMoney >= retirement.LastRequiredFunds {
 				retirement.Status = "Completed"
 				retirement.LastMonthlyExpenses = 0
 				retirement.LastMonthlyExpenses = 0
-				notification := &entities.Notification{
-					ID:        uuid.New().String(),
-					UserID:    user.ID,
-					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
-					CreatedAt: time.Now(),
-				}
-
+				notification := utils.SuccessNotification("retirementplan", user.ID, retirement.PlanName, retirement.ID, allMoney)
 				_ = u.notirepo.CreateNotification(notification)
-				socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+				socket.SendNotificationToUser(userID, *notification)
 			}
 
 			_, err = u.retirementrepo.UpdateRetirementPlan(retirement)
@@ -288,5 +313,22 @@ func (u *AssetUseCaseImpl) DeleteAssetByID(id string, userID string, transfers [
 			continue
 		}
 	}
+
+	his := entities.History{
+		ID:        uuid.New().String(),
+		Method:    "withdraw",
+		Type:      "saving_money",
+		Category:  "asset",
+		Name:      asset.Name,
+		Money:     asset.CurrentMoney - totalTransfer,
+		UserID:    userID,
+		TrackDate: time.Now(),
+	}
+
+	_, err = u.userrepo.CreateHistory(&his)
+	if err != nil {
+		return err
+	}
+
 	return u.assetrepo.DeleteAssetByID(asset.ID)
 }

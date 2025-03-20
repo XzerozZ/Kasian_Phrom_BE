@@ -1,14 +1,23 @@
 package usecases
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"mime/multipart"
+	"net/http"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/configs"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/nursing_house/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
+	"golang.org/x/exp/rand"
+
+	"gorm.io/gorm"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -22,17 +31,25 @@ type NhUseCase interface {
 	GetNhByID(id string) (*entities.NursingHouse, error)
 	GetNhNextID() (string, error)
 	UpdateNhByID(id string, nursingHouse entities.NursingHouse, files []multipart.FileHeader, imagesToDelete []string, ctx *fiber.Ctx) (*entities.NursingHouse, error)
+
+	GetNhByIDForUser(id, userID string) (*entities.NursingHouse, error)
+	RecommendationCosine(userID string) ([]entities.NursingHouse, error)
+	RecommendationLLM(userID string) ([]entities.NursingHouse, error)
+
+	CreateNhMock(nursingHouse entities.NursingHouse, links []string, ctx *fiber.Ctx) (*entities.NursingHouse, error)
 }
 
 type NhUseCaseImpl struct {
 	nhrepo repositories.NhRepository
 	config configs.Supabase
+	recom  configs.Recommend
 }
 
-func NewNhUseCase(nhrepo repositories.NhRepository, config configs.Supabase) *NhUseCaseImpl {
+func NewNhUseCase(nhrepo repositories.NhRepository, config configs.Supabase, recom configs.Recommend) *NhUseCaseImpl {
 	return &NhUseCaseImpl{
 		nhrepo: nhrepo,
 		config: config,
+		recom:  recom,
 	}
 }
 
@@ -170,4 +187,198 @@ func (u *NhUseCaseImpl) UpdateNhByID(id string, nursingHouse entities.NursingHou
 	}
 
 	return updatedNh, nil
+}
+
+func (u *NhUseCaseImpl) GetNhByIDForUser(id, userID string) (*entities.NursingHouse, error) {
+	nhHistory, err := u.nhrepo.GetNhHistory(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			newNhHistory := &entities.NursingHouseHistory{
+				UserID:         userID,
+				NursingHouseID: id,
+			}
+
+			if err := u.nhrepo.CreateNhHistory(newNhHistory); err != nil {
+				return nil, err
+			}
+
+			return u.nhrepo.GetNhByID(id)
+		}
+
+		return nil, err
+	}
+
+	if nhHistory.NursingHouseID != id {
+		nhHistory.NursingHouseID = id
+		if err := u.nhrepo.UpdateNhHistory(nhHistory); err != nil {
+			return nil, err
+		}
+	}
+
+	return u.nhrepo.GetNhByID(id)
+}
+
+func (u *NhUseCaseImpl) RecommendationCosine(userID string) ([]entities.NursingHouse, error) {
+	nhHistory, err := u.nhrepo.GetNhHistory(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			recommend, err := u.nhrepo.GetAllNh()
+			if err != nil {
+				return nil, err
+			}
+
+			limit := 5
+			if len(recommend) < limit {
+				limit = len(recommend)
+			}
+
+			rand.Shuffle(len(recommend), func(i, j int) {
+				recommend[i], recommend[j] = recommend[j], recommend[i]
+			})
+
+			return recommend[:limit], nil
+		}
+
+		return nil, err
+	}
+
+	nhName := url.QueryEscape(strings.ReplaceAll(nhHistory.NursingHouse.Name, " ", "_"))
+	urlStr := fmt.Sprintf("%s/cosine?nh_name=%s", u.recom.URL, nhName)
+	resp, err := http.Get(urlStr)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get recommendation: %s | Response: %s", resp.Status, string(body))
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, err
+	}
+
+	resultList, ok := result["result"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid response format")
+	}
+
+	var nursingHomes []entities.NursingHouse
+	for _, name := range resultList {
+		nhName, ok := name.(string)
+		if !ok {
+			continue
+		}
+
+		nursingHome, err := u.nhrepo.GetNhByName(nhName)
+		if err != nil {
+			continue
+		}
+
+		nursingHomes = append(nursingHomes, nursingHome)
+	}
+
+	return nursingHomes, nil
+}
+
+func (u *NhUseCaseImpl) RecommendationLLM(userID string) ([]entities.NursingHouse, error) {
+	nhHistory, err := u.nhrepo.GetNhHistory(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			recommend, err := u.nhrepo.GetAllNh()
+			if err != nil {
+				return nil, err
+			}
+
+			limit := 5
+			if len(recommend) < limit {
+				limit = len(recommend)
+			}
+
+			rand.Shuffle(len(recommend), func(i, j int) {
+				recommend[i], recommend[j] = recommend[j], recommend[i]
+			})
+
+			return recommend[:limit], nil
+		}
+
+		return nil, err
+	}
+
+	nhName := url.QueryEscape(strings.ReplaceAll(nhHistory.NursingHouse.Name, " ", "_"))
+	urlStr := fmt.Sprintf("%s/llm?nh_name=%s", u.recom.URL, nhName)
+	resp, err := http.Get(urlStr)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get recommendation: %s | Response: %s", resp.Status, string(body))
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, err
+	}
+
+	resultList, ok := result["result"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid response format")
+	}
+
+	var nursingHomes []entities.NursingHouse
+	for _, name := range resultList {
+		nhName, ok := name.(string)
+		if !ok {
+			continue
+		}
+
+		nursingHome, err := u.nhrepo.GetNhByName(nhName)
+		if err != nil {
+			continue
+		}
+
+		nursingHomes = append(nursingHomes, nursingHome)
+	}
+
+	return nursingHomes, nil
+}
+
+func (u *NhUseCaseImpl) CreateNhMock(nursingHouse entities.NursingHouse, links []string, ctx *fiber.Ctx) (*entities.NursingHouse, error) {
+	id, err := u.nhrepo.GetNhNextID()
+	if err != nil {
+		return nil, err
+	}
+
+	if nursingHouse.Price < 0 {
+		return nil, errors.New("price must be greater than zero")
+	}
+
+	nursingHouse.ID = id
+	var images []entities.Image
+	for _, links := range links {
+		images = append(images, entities.Image{
+			ID:        uuid.New().String(),
+			ImageLink: links,
+		})
+	}
+
+	createdNh, err := u.nhrepo.CreateNh(&nursingHouse, images)
+	if err != nil {
+		return nil, err
+	}
+
+	return createdNh, nil
 }

@@ -2,7 +2,6 @@ package usecases
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"mime/multipart"
 	"os"
@@ -140,7 +139,7 @@ func (u *UserUseCaseImpl) LoginAdmin(email, password string) (string, *entities.
 		return "", nil, err
 	}
 
-	return tokenString, &user, nil
+	return tokenString, user, nil
 }
 
 func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User, error) {
@@ -173,7 +172,7 @@ func (u *UserUseCaseImpl) Login(email, password string) (string, *entities.User,
 		return "", nil, err
 	}
 
-	return tokenString, &user, nil
+	return tokenString, user, nil
 }
 
 func (u *UserUseCaseImpl) LoginWithGoogle(user *entities.User) (string, *entities.User, error) {
@@ -214,7 +213,7 @@ func (u *UserUseCaseImpl) LoginWithGoogle(user *entities.User) (string, *entitie
 		return "", nil, err
 	}
 
-	return tokenString, &account, nil
+	return tokenString, account, nil
 }
 
 func (u *UserUseCaseImpl) ResetPassword(userID, oldPassword, newPassword string) error {
@@ -255,7 +254,7 @@ func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHou
 		return nil, err
 	}
 
-	currentMonth := int(time.Now().Month())
+	currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 	if house.NursingHouseID == defaultHouseID {
 		house.MonthlyExpenses = 0
 		house.LastCalculatedMonth = 0
@@ -268,7 +267,6 @@ func (u *UserUseCaseImpl) GetSelectedHouse(userID string) (*entities.SelectedHou
 			return nil, err
 		}
 
-		currentYear, currentMonth := time.Now().Year(), int(time.Now().Month())
 		monthlyExpenses, err := utils.CalculateNursingHouseMonthlyExpense(user, float64(house.NursingHouse.Price), int(currentYear), currentMonth)
 		if err != nil {
 			return nil, err
@@ -330,18 +328,13 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 	}
 
 	if nursingHouseID == defaultHouseID {
-		selectedHouse.NursingHouseID = nursingHouseID
-		selectedHouse.Status = statusCompleted
-		selectedHouse.LastCalculatedMonth = 0
-		selectedHouse.CurrentMoney = 0
-		selectedHouse.MonthlyExpenses = 0
 		totalTransfer := 0.0
 		for _, transfer := range transfers {
 			totalTransfer += transfer.Amount
 		}
 
 		if totalTransfer > selectedHouse.CurrentMoney {
-			return nil, errors.New("transfer amount exceeds asset's current money")
+			return nil, errors.New("transfer amount exceeds House's current money")
 		}
 
 		for _, transfer := range transfers {
@@ -354,19 +347,30 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 
 				if selectedItem.Status == "In_Progress" {
 					selectedItem.CurrentMoney += transfer.Amount
+					his := entities.History{
+						ID:           uuid.New().String(),
+						Method:       "deposit",
+						Type:         "saving_money",
+						Category:     "asset",
+						Name:         selectedItem.Name,
+						Money:        transfer.Amount,
+						TransferFrom: selectedHouse.NursingHouse.Name,
+						UserID:       userID,
+						TrackDate:    time.Now(),
+					}
+
+					_, err = u.userrepo.CreateHistory(&his)
+					if err != nil {
+						return nil, err
+					}
+
 					if selectedItem.CurrentMoney >= selectedItem.TotalCost {
 						selectedItem.Status = "Completed"
 						selectedItem.MonthlyExpenses = 0
 						selectedItem.LastCalculatedMonth = 0
-						notification := &entities.Notification{
-							ID:        uuid.New().String(),
-							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", selectedItem.Name),
-							CreatedAt: time.Now(),
-						}
-
+						notification := utils.SuccessNotification("asset", userID, selectedItem.Name, selectedItem.ID, selectedItem.CurrentMoney)
 						_ = u.notirepo.CreateNotification(notification)
-						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(userID, *notification)
 					}
 
 					_, err = u.assetrepo.UpdateAssetByID(selectedItem)
@@ -384,20 +388,31 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 				}
 
 				retirement.CurrentSavings += transfer.Amount
+				his := entities.History{
+					ID:           uuid.New().String(),
+					Method:       "deposit",
+					Type:         "saving_money",
+					Category:     "retirementplan",
+					Name:         retirement.PlanName,
+					Money:        transfer.Amount,
+					TransferFrom: selectedHouse.NursingHouse.Name,
+					UserID:       userID,
+					TrackDate:    time.Now(),
+				}
+
+				_, err = u.userrepo.CreateHistory(&his)
+				if err != nil {
+					return nil, err
+				}
+
 				allMoney := retirement.CurrentSavings + retirement.CurrentTotalInvestment
 				if allMoney >= retirement.LastRequiredFunds {
 					retirement.Status = "Completed"
 					retirement.LastMonthlyExpenses = 0
 					retirement.LastMonthlyExpenses = 0
-					notification := &entities.Notification{
-						ID:        uuid.New().String(),
-						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
-						CreatedAt: time.Now(),
-					}
-
+					notification := utils.SuccessNotification("retirementplan", userID, retirement.PlanName, retirement.ID, allMoney)
 					_ = u.notirepo.CreateNotification(notification)
-					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+					socket.SendNotificationToUser(userID, *notification)
 				}
 				_, err = u.retirementrepo.UpdateRetirementPlan(retirement)
 				if err != nil {
@@ -407,6 +422,28 @@ func (u *UserUseCaseImpl) UpdateSelectedHouse(userID, nursingHouseID string, tra
 				continue
 			}
 		}
+
+		his := entities.History{
+			ID:        uuid.New().String(),
+			Method:    "withdraw",
+			Type:      "saving_money",
+			Category:  "house",
+			Name:      selectedHouse.NursingHouse.Name,
+			Money:     selectedHouse.CurrentMoney - totalTransfer,
+			UserID:    userID,
+			TrackDate: time.Now(),
+		}
+
+		_, err = u.userrepo.CreateHistory(&his)
+		if err != nil {
+			return nil, err
+		}
+
+		selectedHouse.NursingHouseID = nursingHouseID
+		selectedHouse.Status = statusCompleted
+		selectedHouse.LastCalculatedMonth = 0
+		selectedHouse.CurrentMoney = 0
+		selectedHouse.MonthlyExpenses = 0
 	}
 
 	if nursingHouseID != selectedHouse.NursingHouseID || selectedHouse.LastCalculatedMonth != int(time.Now().Month()) {
@@ -513,7 +550,7 @@ func (u *UserUseCaseImpl) ChangedPassword(email, newPassword string) error {
 	}
 
 	user.Password = string(hashedPassword)
-	_, err = u.userrepo.UpdateUserByID(&user)
+	_, err = u.userrepo.UpdateUserByID(user)
 	if err != nil {
 		return err
 	}
@@ -541,7 +578,7 @@ func (u *UserUseCaseImpl) CalculateRetirement(userID string) (fiber.Map, error) 
 		allTotalCost += asset.TotalCost
 		if asset.LastCalculatedMonth == currentMonth {
 			allAssetsExpense += asset.MonthlyExpenses
-		} else if asset.LastCalculatedMonth != currentMonth {
+		} else if asset.Status != "Paused" && asset.LastCalculatedMonth != currentMonth {
 			asset.MonthlyExpenses = utils.CalculateMonthlyExpenses(&asset, currentYear, currentMonth)
 			asset.LastCalculatedMonth = currentMonth
 			allAssetsExpense += asset.MonthlyExpenses
@@ -669,7 +706,15 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					count++
 				}
 
-				count++
+				var validPlan *entities.RetirementPlan
+				if user.RetirementPlan.Status != "Completed" {
+					validPlan = &user.RetirementPlan
+				}
+
+				if validPlan != nil {
+					count++
+				}
+
 				amounts := history.Money / float64(count)
 				for i := range validAssets {
 					validAssets[i].CurrentMoney += amounts
@@ -677,15 +722,9 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						validAssets[i].Status = "Completed"
 						validAssets[i].MonthlyExpenses = 0
 						validAssets[i].LastCalculatedMonth = 0
-						notification := &entities.Notification{
-							ID:        uuid.New().String(),
-							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", validAssets[i].Name),
-							CreatedAt: time.Now(),
-						}
-
+						notification := utils.SuccessNotification("asset", user.ID, validAssets[i].Name, validAssets[i].ID, validAssets[i].CurrentMoney)
 						_ = u.notirepo.CreateNotification(notification)
-						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(user.ID, *notification)
 					}
 
 					if _, err := u.assetrepo.UpdateAssetByID(&validAssets[i]); err != nil {
@@ -700,36 +739,25 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						user.House.Status = "Completed"
 						user.House.MonthlyExpenses = 0
 						user.House.LastCalculatedMonth = 0
-						notification := &entities.Notification{
-							ID:        uuid.New().String(),
-							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก : '%s' ได้เสร็จสิ้นแล้ว", validHouse.NursingHouse.Name),
-							CreatedAt: time.Now(),
-						}
-
+						notification := utils.SuccessNotification("house", user.ID, user.House.NursingHouse.Name, user.House.NursingHouseID, user.House.CurrentMoney)
 						_ = u.notirepo.CreateNotification(notification)
-						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(user.ID, *notification)
 					}
 
 				}
 
-				user.RetirementPlan.CurrentSavings += amounts
-				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
-				if allMoney >= user.RetirementPlan.LastRequiredFunds {
-					user.RetirementPlan.Status = "Completed"
-					user.RetirementPlan.LastMonthlyExpenses = 0
-					user.RetirementPlan.LastMonthlyExpenses = 0
-					notification := &entities.Notification{
-						ID:        uuid.New().String(),
-						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", validHouse.NursingHouse.Name),
-						CreatedAt: time.Now(),
+				if validPlan != nil {
+					user.RetirementPlan.CurrentSavings += amounts
+					allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
+					if allMoney >= user.RetirementPlan.LastRequiredFunds {
+						user.RetirementPlan.Status = "Completed"
+						user.RetirementPlan.LastMonthlyExpenses = 0
+						user.RetirementPlan.LastMonthlyExpenses = 0
+						notification := utils.SuccessNotification("retirementplan", user.ID, user.RetirementPlan.PlanName, user.RetirementPlan.ID, allMoney)
+						_ = u.notirepo.CreateNotification(notification)
+						socket.SendNotificationToUser(user.ID, *notification)
 					}
-
-					_ = u.notirepo.CreateNotification(notification)
-					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 				}
-
 			case "retirementplan":
 				user.RetirementPlan.CurrentSavings += history.Money
 				allMoney := user.RetirementPlan.CurrentSavings + user.RetirementPlan.CurrentTotalInvestment
@@ -737,15 +765,9 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					user.RetirementPlan.Status = "Completed"
 					user.RetirementPlan.LastMonthlyExpenses = 0
 					user.RetirementPlan.LastMonthlyExpenses = 0
-					notification := &entities.Notification{
-						ID:        uuid.New().String(),
-						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
-						CreatedAt: time.Now(),
-					}
-
+					notification := utils.SuccessNotification("retirementplan", user.ID, user.RetirementPlan.PlanName, user.RetirementPlan.ID, allMoney)
 					_ = u.notirepo.CreateNotification(notification)
-					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+					socket.SendNotificationToUser(user.ID, *notification)
 				}
 
 			case "house":
@@ -756,15 +778,9 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						user.House.Status = "Completed"
 						user.House.MonthlyExpenses = 0
 						user.House.LastCalculatedMonth = 0
-						notification := &entities.Notification{
-							ID:        uuid.New().String(),
-							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก บ้านพัก : '%s' ได้เสร็จสิ้นแล้ว", user.House.NursingHouse.Name),
-							CreatedAt: time.Now(),
-						}
-
+						notification := utils.SuccessNotification("house", user.ID, user.House.NursingHouse.Name, user.House.NursingHouseID, user.House.CurrentMoney)
 						_ = u.notirepo.CreateNotification(notification)
-						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(user.ID, *notification)
 					}
 				} else {
 					return nil, errors.New("cannot update completed nursing house")
@@ -782,15 +798,9 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 						asset.Status = "Completed"
 						asset.MonthlyExpenses = 0
 						asset.LastCalculatedMonth = 0
-						notification := &entities.Notification{
-							ID:        uuid.New().String(),
-							UserID:    user.ID,
-							Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", asset.Name),
-							CreatedAt: time.Now(),
-						}
-
+						notification := utils.SuccessNotification("asset", user.ID, asset.Name, asset.ID, asset.CurrentMoney)
 						_ = u.notirepo.CreateNotification(notification)
-						socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+						socket.SendNotificationToUser(user.ID, *notification)
 					}
 
 					_, err = u.assetrepo.UpdateAssetByID(asset)
@@ -811,15 +821,9 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				user.RetirementPlan.Status = "Completed"
 				user.RetirementPlan.LastMonthlyExpenses = 0
 				user.RetirementPlan.LastMonthlyExpenses = 0
-				notification := &entities.Notification{
-					ID:        uuid.New().String(),
-					UserID:    user.ID,
-					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
-					CreatedAt: time.Now(),
-				}
-
+				notification := utils.SuccessNotification("retirementplan", user.ID, user.RetirementPlan.PlanName, user.RetirementPlan.ID, allMoney)
 				_ = u.notirepo.CreateNotification(notification)
-				socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+				socket.SendNotificationToUser(user.ID, *notification)
 			}
 		}
 
@@ -837,15 +841,6 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 					user.RetirementPlan.Status = "Completed"
 					user.RetirementPlan.LastMonthlyExpenses = 0
 					user.RetirementPlan.LastMonthlyExpenses = 0
-					notification := &entities.Notification{
-						ID:        uuid.New().String(),
-						UserID:    user.ID,
-						Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
-						CreatedAt: time.Now(),
-					}
-
-					_ = u.notirepo.CreateNotification(notification)
-					socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 				} else {
 					user.RetirementPlan.Status = "In_Progress"
 				}
@@ -894,15 +889,6 @@ func (u *UserUseCaseImpl) CreateHistory(history entities.History) (*entities.His
 				user.RetirementPlan.Status = "Completed"
 				user.RetirementPlan.LastMonthlyExpenses = 0
 				user.RetirementPlan.LastMonthlyExpenses = 0
-				notification := &entities.Notification{
-					ID:        uuid.New().String(),
-					UserID:    user.ID,
-					Message:   fmt.Sprintf("สุดยอดมาก แผนเกษียณ : '%s' ของคุณได้ถึงเป้าแล้ว", user.RetirementPlan.PlanName),
-					CreatedAt: time.Now(),
-				}
-
-				_ = u.notirepo.CreateNotification(notification)
-				socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
 			} else {
 				user.RetirementPlan.Status = "In_Progress"
 			}

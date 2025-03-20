@@ -84,10 +84,6 @@ func CalculateMonthlySavings(plan *entities.RetirementPlan, age, currentYear, cu
 }
 
 func CalculateMonthlyExpenses(asset *entities.Asset, currentYear, currentMonth int) float64 {
-	if asset.Status != "In_Progress" {
-		return 0
-	}
-
 	endYear, err := strconv.Atoi(asset.EndYear)
 	if err != nil {
 		return 0

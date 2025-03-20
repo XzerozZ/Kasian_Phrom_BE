@@ -2,7 +2,6 @@ package usecases
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/entities"
@@ -10,6 +9,7 @@ import (
 	notiRepo "github.com/XzerozZ/Kasian_Phrom_BE/modules/notification/repositories"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/socket"
 	"github.com/XzerozZ/Kasian_Phrom_BE/modules/transaction/repositories"
+	"github.com/XzerozZ/Kasian_Phrom_BE/pkg/utils"
 	"github.com/google/uuid"
 )
 
@@ -60,6 +60,9 @@ func (u *TransactionUseCaseImpl) CreateTransactionsForAllUsers() error {
 			}
 		} else if trans.Status == "ชำระ" {
 			trans.Status = "ค้างชำระ"
+			notification := utils.AlertNoti("loan", trans.UserID, trans.Loan.Name, trans.LoanID, trans.Loan.MonthlyExpenses)
+			_ = u.notirepo.CreateNotification(notification)
+			socket.SendNotificationToUser(trans.UserID, *notification)
 			if err := u.transrepo.UpdateTransaction(&trans); err != nil {
 				return err
 			}
@@ -124,15 +127,9 @@ func (u *TransactionUseCaseImpl) MarkTransactiontoPaid(id, userID string) error 
 		loan.RemainingMonths--
 		if loan.RemainingMonths == 0 {
 			loan.Status = "Completed"
-			notification := &entities.Notification{
-				ID:        uuid.New().String(),
-				UserID:    userID,
-				Message:   fmt.Sprintf("สุดยอดมาก สินทรัพย์ : '%s' ได้เสร็จสิ้นแล้ว", loan.Name),
-				CreatedAt: time.Now(),
-			}
-
+			notification := utils.SuccessNotification("loan", userID, loan.Name, loan.ID, 0)
 			_ = u.notirepo.CreateNotification(notification)
-			socket.BroadcastNotification(fmt.Sprintf("Notification: %s", notification.Message))
+			socket.SendNotificationToUser(userID, *notification)
 		}
 
 		if _, err := u.loanrepo.UpdateLoanByID(loan); err != nil {

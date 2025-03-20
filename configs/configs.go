@@ -13,6 +13,7 @@ type Configs struct {
 	App        Fiber
 	Supabase   Supabase
 	Mail       Mail
+	Recommend  Recommend
 }
 
 type Fiber struct {
@@ -44,6 +45,10 @@ type Mail struct {
 	Port   string
 	Sender string
 	Key    string
+}
+
+type Recommend struct {
+	URL string
 }
 
 func LoadConfigs() *Configs {
@@ -78,6 +83,9 @@ func LoadConfigs() *Configs {
 			Port:   os.Getenv("EMAIL_PORT"),
 			Sender: os.Getenv("EMAIL_USER"),
 			Key:    os.Getenv("EMAIL_PASS"),
+		},
+		Recommend: Recommend{
+			URL: os.Getenv("RECOMMEND_API_URL"),
 		},
 	}
 }

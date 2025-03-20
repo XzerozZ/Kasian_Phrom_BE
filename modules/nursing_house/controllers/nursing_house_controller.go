@@ -38,6 +38,15 @@ func (c *NhController) CreateNhHandler(ctx *fiber.Ctx) error {
 		})
 	}
 
+	if nursingHouse.Name == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Invalid request: Missing nursing house name",
+			"result":      nil,
+		})
+	}
+
 	files := form.File["images"]
 	if len(files) == 0 {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -244,5 +253,137 @@ func (c *NhController) UpdateNhByIDHandler(ctx *fiber.Ctx) error {
 		"status_code": fiber.StatusOK,
 		"message":     "Nursing house retrieved successfully",
 		"result":      updatedNh,
+	})
+}
+
+func (c *NhController) GetNhByIDForUserHandler(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
+	data, err := c.nhusecase.GetNhByIDForUser(id, userID)
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "NursingHouse retrieved successfully",
+		"result":      data,
+	})
+}
+
+func (c *NhController) GetRecommendCosine(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
+	data, err := c.nhusecase.RecommendationCosine(userID)
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Recommended nursinghouse retrieved successfull",
+		"result":      data,
+	})
+}
+
+func (c *NhController) GetRecommendLLM(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Missing user ID",
+			"result":      nil,
+		})
+	}
+
+	data, err := c.nhusecase.RecommendationLLM(userID)
+	if err != nil {
+		return ctx.Status(fiber.ErrNotFound.Code).JSON(fiber.Map{
+			"status":      fiber.ErrNotFound.Message,
+			"status_code": fiber.ErrNotFound.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Recommended nursinghouse retrieved successfully",
+		"result":      data,
+	})
+}
+
+func (c *NhController) CreateNhMockHandler(ctx *fiber.Ctx) error {
+	var nursingHouse entities.NursingHouse
+	if err := ctx.BodyParser(&nursingHouse); err != nil {
+		return ctx.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"status":      fiber.ErrBadRequest.Message,
+			"status_code": fiber.ErrBadRequest.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	links := []string{
+		ctx.FormValue("link1"),
+		ctx.FormValue("link2"),
+		ctx.FormValue("link3"),
+		ctx.FormValue("link4"),
+		ctx.FormValue("link5"),
+	}
+
+	var validLinks []string
+	for _, link := range links {
+		if link != "" {
+			validLinks = append(validLinks, link)
+		}
+	}
+
+	data, err := c.nhusecase.CreateNhMock(nursingHouse, validLinks, ctx)
+	if err != nil {
+		return ctx.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"status":      fiber.ErrInternalServerError.Message,
+			"status_code": fiber.ErrInternalServerError.Code,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"status":      "Success",
+		"status_code": fiber.StatusOK,
+		"message":     "Nursing house created successfully",
+		"result":      data,
 	})
 }

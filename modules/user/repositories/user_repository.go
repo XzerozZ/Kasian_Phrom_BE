@@ -19,7 +19,7 @@ func NewGormUserRepository(db *gorm.DB) *GormUserRepository {
 type UserRepository interface {
 	CreateUser(user *entities.User) (*entities.User, error)
 	CreateSelectedHouse(selectedHouse *entities.SelectedHouse) error
-	FindUserByEmail(email string) (entities.User, error)
+	FindUserByEmail(email string) (*entities.User, error)
 	GetUserByID(id string) (*entities.User, error)
 	GetRoleByName(name string) (entities.Role, error)
 	UpdateUserByID(user *entities.User) (*entities.User, error)
@@ -68,14 +68,14 @@ func (r *GormUserRepository) CreateSelectedHouse(selectedHouse *entities.Selecte
 	return r.db.Create(&selectedHouse).Error
 }
 
-func (r *GormUserRepository) FindUserByEmail(email string) (entities.User, error) {
+func (r *GormUserRepository) FindUserByEmail(email string) (*entities.User, error) {
 	var user entities.User
 	err := r.db.Preload("Role").Where("email = ?", email).First(&user).Error
 	if err != nil {
-		return entities.User{}, err
+		return nil, err
 	}
 
-	return user, nil
+	return &user, nil
 }
 
 func (r *GormUserRepository) GetUserByID(id string) (*entities.User, error) {
