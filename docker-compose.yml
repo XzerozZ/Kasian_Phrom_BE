@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:latest
-    container_name: SE
+    container_name: se
     ports:
       - "${DB_PORT}:${DB_PORT}"
     environment:
