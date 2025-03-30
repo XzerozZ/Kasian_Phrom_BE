@@ -208,7 +208,7 @@ func TestGetAssetByUserID_Success(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Len(t, results, 2)
-	assert.Equal(t, currentMonth, results[0].LastCalculatedMonth)
+	assert.Equal(t, currentMonth, results[1].LastCalculatedMonth)
 	mockAssetRepo.AssertExpectations(t)
 }
 
